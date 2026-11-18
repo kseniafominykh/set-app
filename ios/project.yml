@@ -90,6 +90,8 @@ targets:
         NSCameraUsageDescription: SET открывает камеру, если вы хотите сфотографировать образ или референс прямо в проект.
         NSPhotoLibraryUsageDescription: SET открывает фото, которые вы выбираете для мудборда и образов.
         NSPhotoLibraryAddUsageDescription: SET сохраняет в Фото картинку с итогами съёмки, если вы попросите.
+        # общая с виджетами связка ключей (см. Shared/Snapshot.swift, SharedStore)
+        SETKeychainGroup: $(AppIdentifierPrefix)com.naumkogan.set.shared
   SETWidgets:
     type: app-extension
     platform: iOS
@@ -111,5 +113,6 @@ targets:
         CFBundleDisplayName: SET
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        SETKeychainGroup: $(AppIdentifierPrefix)com.naumkogan.set.shared
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension

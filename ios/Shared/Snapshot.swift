@@ -1,7 +1,7 @@
 import Foundation
 
 /// Данные для виджетов и напоминаний. Собирает их app.js (`nativeSnapshot()`), приложение кладёт
-/// файл в общую папку App Group, виджеты читают его оттуда.
+/// их в общую связку ключей (см. SharedStore), виджеты читают их оттуда.
 struct Snapshot: Codable, Equatable {
     var v: Int
     var lang: String
@@ -45,33 +45,64 @@ struct Snapshot: Codable, Equatable {
     func t(_ ru: String, _ en: String) -> String { self.en ? en : ru }
 }
 
+/// Общая связка ключей приложения и виджетов (keychain-access-groups).
+/// Не App Group: группу приложений Apple не даёт завести ключом App Store Connect API, а связка ключей
+/// с префиксом команды входит в любой профиль подписи и ничего не требует в кабинете разработчика.
+/// Группа - `SETKeychainGroup` в Info.plist обоих таргетов: $(AppIdentifierPrefix)com.naumkogan.set.shared.
 enum SharedStore {
-    static let appGroup = "group.com.naumkogan.set"
-    private static let fileName = "widget-snapshot.json"
+    private static let service = "com.naumkogan.set.widget"
+    private static let account = "snapshot"
 
-    static var fileURL: URL? {
-        FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroup)?
-            .appendingPathComponent(fileName)
+    private static var accessGroup: String? {
+        Bundle.main.object(forInfoDictionaryKey: "SETKeychainGroup") as? String
+    }
+
+    private static func query() -> [String: Any] {
+        var q: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: account,
+            kSecAttrSynchronizable as String: false
+        ]
+        if let group = accessGroup, !group.isEmpty { q[kSecAttrAccessGroup as String] = group }
+        return q
+    }
+
+    private static func loadData() -> Data? {
+        var q = query()
+        q[kSecReturnData as String] = true
+        q[kSecMatchLimit as String] = kSecMatchLimitOne
+        var out: CFTypeRef?
+        guard SecItemCopyMatching(q as CFDictionary, &out) == errSecSuccess else { return nil }
+        return out as? Data
     }
 
     static func load() -> Snapshot? {
-        guard let url = fileURL, let data = try? Data(contentsOf: url) else { return nil }
+        guard let data = loadData() else { return nil }
         return try? JSONDecoder().decode(Snapshot.self, from: data)
     }
 
     /// true - если данные поменялись и виджеты надо перерисовать
     @discardableResult
     static func save(_ snap: Snapshot) -> Bool {
-        guard let url = fileURL else { return false }
-        if load() == snap { return false }
         guard let data = try? JSONEncoder().encode(snap) else { return false }
-        try? data.write(to: url, options: .atomic)
-        return true
+        if loadData() == data { return false }
+        // экран блокировки рисует виджеты и при заблокированном телефоне - читать можно после первой разблокировки
+        let attrs: [String: Any] = [
+            kSecValueData as String: data,
+            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
+        ]
+        var status = SecItemUpdate(query() as CFDictionary, attrs as CFDictionary)
+        if status == errSecItemNotFound {
+            var add = query()
+            attrs.forEach { add[$0.key] = $0.value }
+            status = SecItemAdd(add as CFDictionary, nil)
+        }
+        return status == errSecSuccess
     }
 
     static func clear() {
-        guard let url = fileURL else { return }
-        try? FileManager.default.removeItem(at: url)
+        SecItemDelete(query() as CFDictionary)
     }
 }
 

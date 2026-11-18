@@ -224,16 +224,16 @@ then
     fail "пакет не прошёл проверку"
 fi
 
-# Виджеты: расширение внутри пакета, та же группа приложений у обоих, тот же номер сборки.
+# Виджеты: расширение внутри пакета, общая связка ключей у обоих, тот же номер сборки.
 APPEX="$APP/PlugIns/SETWidgets.appex"
 [ -d "$APPEX" ] || fail "в пакете нет виджетов PlugIns/SETWidgets.appex"
 codesign -d --entitlements - --xml "$APPEX" >"$CHECK/widgets-entitlements.plist" 2>/dev/null || fail "не читаются entitlements виджетов"
 for E in "$CHECK/entitlements.plist" "$CHECK/widgets-entitlements.plist"; do
-    grep -q "group.com.naumkogan.set" "$E" || fail "нет группы group.com.naumkogan.set в $(basename "$E") - виджеты не увидят данные"
+    grep -q "$TEAM.com.naumkogan.set.shared" "$E" || fail "нет связки ключей $TEAM.com.naumkogan.set.shared в $(basename "$E") - виджеты не увидят данные"
 done
 WIDGET_VERSION="$(/usr/bin/plutil -extract CFBundleVersion raw "$APPEX/Info.plist" 2>/dev/null || true)"
 [ "$WIDGET_VERSION" = "$BUILD_NUMBER" ] || fail "у виджетов номер сборки «$WIDGET_VERSION», а не $BUILD_NUMBER (ITMS-90473)"
-ok "виджеты внутри, группа group.com.naumkogan.set у приложения и у виджетов"
+ok "виджеты внутри, связка ключей $TEAM.com.naumkogan.set.shared у приложения и у виджетов"
 
 ARCHS="$(lipo -archs "$APP/SET" 2>&1 || true)"
 case "$ARCHS" in

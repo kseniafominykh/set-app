@@ -49,6 +49,8 @@
 	<string>SET сохраняет в Фото картинку с итогами съёмки, если вы попросите.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>SET открывает фото, которые вы выбираете для мудборда и образов.</string>
+	<key>SETKeychainGroup</key>
+	<string>$(AppIdentifierPrefix)com.naumkogan.set.shared</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
