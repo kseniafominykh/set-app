@@ -8,6 +8,10 @@
 //   node Tools/asc.mjs external     внешняя группа «Все»: тексты из testflight-content.json, свежая сборка, ссылка
 //   node Tools/asc.mjs submit       отправить свежую сборку на бета-проверку Apple (нужна для внешней группы)
 //   node Tools/asc.mjs link         публичная ссылка внешней группы и состояние проверки
+//   node Tools/asc.mjs invite <почта> <имя> <фамилия>
+//                                   пригласить в команду (роль «Маркетинг», только SET) - для теста без проверки Apple
+//   node Tools/asc.mjs uninvite <почта>
+//                                   отозвать неотвеченное приглашение
 //
 // Внутреннее тестирование - без бета-проверки Apple, сборка появляется в TestFlight через 5-15 минут.
 // Внешнее (по публичной ссылке, до 10 000 человек) - после бета-проверки Apple, обычно до суток.
@@ -343,9 +347,56 @@ async function commandLink(jwt) {
   if (state) console.log(`состояние внешнего теста свежей сборки: ${state}`);
 }
 
+// ------------------------------------------------------------------ приглашение в команду: TestFlight без бета-проверки
+
+/**
+ * Пригласить человека в команду App Store Connect с ролью «Маркетинг» и доступом только к SET.
+ * Когда он примет приглашение, `internal` добавит его во внутреннюю группу «Свои» - там сборки без проверки Apple.
+ * Сертификатов, денег и других приложений команды он не видит.
+ */
+async function commandInvite(jwt) {
+  const [email, firstName, lastName] = process.argv.slice(3);
+  if (!email?.includes('@') || !firstName || !lastName) die('нужно: node Tools/asc.mjs invite <почта Apple ID> <имя> <фамилия>');
+  const app = await findApp(jwt);
+  if (!app) die(APP_MISSING);
+  const lower = email.toLowerCase();
+
+  const users = (await call(jwt, 'GET', '/users?limit=200&fields[users]=username')).data ?? [];
+  if (users.some((u) => u.attributes.username?.toLowerCase() === lower)) {
+    console.log(`${email} уже в команде - добавляю во внутреннюю группу`);
+    return commandInternal(jwt);
+  }
+
+  const pending = (await call(jwt, 'GET', `/userInvitations?filter[email]=${encodeURIComponent(email)}&limit=10&fields[userInvitations]=email,expirationDate`)).data ?? [];
+  if (pending.length) {
+    const until = pending[0].attributes.expirationDate?.slice(0, 10);
+    return console.log(`приглашение на ${email} уже отправлено${until ? `, действует до ${until}` : ''}. Когда примут: node Tools/asc.mjs internal`);
+  }
+
+  await call(jwt, 'POST', '/userInvitations', {
+    data: {
+      type: 'userInvitations',
+      attributes: { email, firstName, lastName, roles: ['MARKETING'], allAppsVisible: false, provisioningAllowed: false },
+      relationships: { visibleApps: { data: [{ type: 'apps', id: app.id }] } },
+    },
+  });
+  console.log(`приглашение в App Store Connect отправлено на ${email} (роль «Маркетинг», только «${app.attributes.name}»).`);
+  console.log('Когда его примут: node Tools/asc.mjs internal - и сборки придут в TestFlight без проверки Apple.');
+}
+
+/** Отозвать ещё не принятое приглашение в команду. */
+async function commandUninvite(jwt) {
+  const email = process.argv[3];
+  if (!email?.includes('@')) die('нужно: node Tools/asc.mjs uninvite <почта>');
+  const pending = (await call(jwt, 'GET', `/userInvitations?filter[email]=${encodeURIComponent(email)}&limit=10&fields[userInvitations]=email`)).data ?? [];
+  if (!pending.length) return console.log(`неотвеченных приглашений на ${email} нет`);
+  for (const inv of pending) await call(jwt, 'DELETE', `/userInvitations/${inv.id}`);
+  console.log(`приглашение на ${email} отозвано, ссылка из письма больше не работает`);
+}
+
 const commands = {
   status: commandStatus, bundle: commandBundle, builds: commandBuilds, internal: commandInternal,
-  external: commandExternal, submit: commandSubmit, link: commandLink,
+  external: commandExternal, submit: commandSubmit, link: commandLink, invite: commandInvite, uninvite: commandUninvite,
 };
 const name = process.argv[2] ?? 'status';
 if (!commands[name]) die(`нет команды «${name}». Есть: ${Object.keys(commands).join(', ')}`);
