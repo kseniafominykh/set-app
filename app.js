@@ -1,6 +1,6 @@
 'use strict';
 /* SET — beta. All data lives on this device (localStorage). */
-const VERSION = '0.10.2 beta';
+const VERSION = '0.11.0 beta';
 const APP_URL = (location.host + location.pathname).replace(/index\.html$/, '').replace(/\/$/, '');
 const KEY = 'set.v1';
 
@@ -40,7 +40,7 @@ function fresh() {
   return {
     v: 1,
     lang: (navigator.language || 'ru').toLowerCase().startsWith('ru') ? 'ru' : 'en',
-    profile: { name: '', phone: '', city: '', insta: '', roles: [], ownRole: '', ownSkill: '', skills: [], exp: '', rate: '', unit: 'смена', contact: 'Telegram', food: [], foodOther: '', onboarded: false },
+    profile: { name: '', phone: '', city: '', insta: '', roles: [], ownRole: '', ownSkill: '', skills: [], exp: '', rate: '', unit: 'смена', contact: 'Telegram', food: [], foodOther: '', tg: '', onboarded: false },
     people: [],
     shoots: []
   };
@@ -57,6 +57,9 @@ function save() {
     catch (e) { toast(T('Не получилось сохранить: память телефона заполнена', 'Could not save: storage is full')); }
   }, 120);
 }
+function fmtPhone(v) { const raw = String(v || '').trim(); let d = raw.replace(/\D/g, ''); if (!d) return ''; if (d.length === 11 && (d[0] === '8' || d[0] === '7')) d = d.slice(1); else if (d.length !== 10) return raw; return '+7 ' + d.slice(0, 3) + ' ' + d.slice(3, 6) + '-' + d.slice(6, 8) + '-' + d.slice(8, 10); }
+function tgNick(v) { const s = String(v || '').trim().replace(/^https?:\/\/(t\.me|telegram\.me)\//i, '').replace(/^@+/, '').replace(/[^\w]/g, ''); return s ? '@' + s : ''; }
+const PHONE_HINT = () => T('Любой формат: 8 900…, +7 900… или 900… — приведём к одному виду.', 'Any format works — we tidy it up.');
 const T = (ru, en) => (S.lang === 'en' ? (en ?? ru) : ru);
 
 /* ---------- dictionaries ---------- */
@@ -89,7 +92,7 @@ const GROUPS = [
     ['creative', 'Креативный директор / арт-директор', 'Creative / art director', ['концепция', 'мудборды', 'арт-дирекшн на площадке', 'контроль кадра', 'визуальный стиль бренда']],
     ['prodassist', 'Ассистент продюсера', 'Production assistant', ['логистика', 'закупки', 'встреча команды', 'тайминг на площадке', 'возврат вещей']],
     ['execprod', 'Исполнительный продюсер', 'Executive producer', ['бюджеты кампаний', 'переговоры с брендом', 'подбор подрядчиков'], 1],
-    ['lineprod', 'Директор площадки / линейный продюсер', 'Line producer / production manager', ['площадка', 'график смен', 'разрешения', 'контроль расходов'], 1],
+    ['lineprod', 'Линейный продюсер', 'Line producer / production manager', ['площадка', 'график смен', 'разрешения', 'контроль расходов'], 1],
     ['ad', 'Второй режиссёр', '1st AD', ['тайминг', 'вызывные', 'порядок сцен', 'дисциплина на площадке'], 1],
     ['script', 'Скрипт-супервайзер', 'Script supervisor', ['раскадровка', 'учёт дублей', 'монтажная непрерывность'], 1],
     ['casting', 'Кастинг-директор', 'Casting director', ['модели', 'герои', 'лонг-листы', 'пробы', 'договорённости с агентствами'], 1],
@@ -97,7 +100,7 @@ const GROUPS = [
     ['runner', 'Раннер / помощник на площадке', 'Runner / set PA', ['закупки', 'доставка', 'встреча людей'], 1],
     ['smm', 'SMM / контент-менеджер', 'SMM / content', ['рилсы', 'сторис', 'контент-план', 'съёмка на телефон'], 1] ] },
   { ru: 'Камера и свет', en: 'Camera & light', glow: 'teal', roles: [
-    ['photo', 'Фотограф', 'Photographer', ['fashion', 'бьюти', 'предметка', 'портрет', 'репортаж', 'интерьер', 'еда', 'съёмка на плёнку', 'ретушь сам']],
+    ['photo', 'Фотограф', 'Photographer', ['fashion', 'бьюти', 'предметка', 'портрет', 'репортаж', 'интерьер', 'еда', 'съёмка на плёнку', 'ретуширую сам']],
     ['video', 'Видеограф / оператор', 'Videographer', ['рилсы', 'реклама', 'клипы', 'ивенты', 'монтирую сам', 'стабилизатор']],
     ['mobile', 'Мобилограф', 'Mobile creator', ['рилсы', 'сторис', 'контент на телефон', 'монтаж в телефоне']],
     ['light', 'Гаффер / световик', 'Gaffer', ['импульсный свет', 'постоянный свет', 'свой свет', 'дым-машина', 'световые схемы']],
@@ -119,25 +122,25 @@ const GROUPS = [
     ['wardrobe', 'Костюмер на площадке', 'Wardrobe on set', ['одевание', 'отпаривание', 'учёт и возврат вещей'], 1],
     ['costume', 'Художник по костюмам', 'Costume designer', ['пошив', 'исторический костюм', 'кино и клипы'], 1],
     ['tailor', 'Портной / подгонка', 'Tailor', ['подгонка по фигуре', 'срочный ремонт', 'пошив'], 1],
-    ['grooming', 'Грумер (мужской образ)', 'Groomer', ['мужской грим', 'борода', 'стрижка'], 1],
+    ['grooming', 'Барбер / мужской образ', 'Barber / grooming', ['мужской грим', 'борода', 'стрижка'], 1],
     ['sfx', 'Пластический грим / SFX', 'SFX make-up', ['раны и шрамы', 'возраст', 'фантазийный грим', 'боди-арт'], 1] ] },
   { ru: 'В кадре', en: 'In frame', glow: 'lemon', roles: [
     ['model', 'Модель', 'Model', ['fashion', 'бьюти', 'коммерция', 'каталог', 'маркетплейсы', 'рилсы', 'руки и детали', 'бельё', 'плюс-сайз']],
-    ['actor', 'Актёр, актриса', 'Actor', ['реклама', 'короткий метр', 'говорю на камеру', 'импровизация']],
-    ['blogger', 'Блогер', 'Creator', ['свой блог', 'интеграции', 'говорю на камеру', 'UGC']],
-    ['hero', 'Герой съёмки', 'Real person', ['не модель', 'эксперт', 'сотрудник бренда', 'семья']],
+    ['actor', 'Актёр / актриса', 'Actor', ['реклама', 'короткий метр', 'клипы', 'импровизация']],
+    ['blogger', 'Блогер', 'Creator', ['свой блог', 'интеграции', 'работа на камеру', 'UGC']],
+    ['hero', 'Герой съёмки', 'Real person', ['эксперт', 'сотрудник бренда', 'клиент бренда', 'семья']],
     ['dancer', 'Танцор', 'Dancer', ['современный танец', 'хореография для клипов', 'contemporary', 'хип-хоп'], 1],
     ['choreo', 'Хореограф / постановщик движения', 'Choreographer', ['постановка движения', 'позинг', 'клипы'], 1],
     ['extra', 'Массовка', 'Extras', ['фон', 'ивенты', 'клипы'], 1],
     ['booker', 'Букер модельного агентства', 'Agency booker', ['подбор моделей', 'условия', 'договоры'], 1],
-    ['petwrangler', 'Хендлер животных', 'Animal handler', ['собаки', 'кошки', 'лошади'], 1] ] },
+    ['petwrangler', 'Дрессировщик животных', 'Animal handler', ['собаки', 'кошки', 'лошади'], 1] ] },
   { ru: 'Сет и площадка', en: 'Set & venue', glow: 'cobalt', roles: [
     ['studio', 'Студия / площадка', 'Studio / venue', ['циклорама', 'интерьерные залы', 'свой свет', 'гримёрка', 'парковка']],
     ['setdesign', 'Сет-дизайнер / художник-постановщик', 'Set / production designer', ['декорации', 'фоны', 'строительство сета', 'эскизы']],
     ['props', 'Реквизитор', 'Props', ['поиск реквизита', 'аренда', 'возврат', 'изготовление']],
     ['florist', 'Флорист', 'Florist', ['композиции', 'инсталляции', 'сухоцветы']],
     ['decor', 'Декоратор', 'Set dresser', ['наполнение кадра', 'текстиль', 'расстановка'], 1],
-    ['builder', 'Застройщик декораций', 'Set builder', ['конструкции', 'покраска', 'монтаж и демонтаж'], 1],
+    ['builder', 'Строитель декораций', 'Set builder', ['конструкции', 'покраска', 'монтаж и демонтаж'], 1],
     ['food', 'Фуд-стилист', 'Food stylist', ['еда в кадре', 'напитки', 'кондитерка'], 1],
     ['rental', 'Прокат техники', 'Gear rental', ['свет', 'камеры', 'грип', 'доставка'], 1],
     ['catering', 'Кейтеринг', 'Catering', ['обеды на площадку', 'кофе-брейк', 'вегетарианское меню'], 1],
@@ -162,7 +165,7 @@ const GROUPS = [
 const ROLE = {};
 GROUPS.forEach((g) => g.roles.forEach((r) => { ROLE[r[0]] = { id: r[0], ru: r[1], en: r[2], skills: r[3], glow: g.glow, more: !!r[4] }; }));
 ROLE.art = ROLE.creative;
-const SK_EN = {"брифы": "briefs", "сметы": "budgets", "кастинг": "casting", "локации": "locations", "ведение клиента": "client management", "договоры": "contracts", "бартер с брендами": "brand barter deals", "логистика": "logistics", "реклама": "commercials", "клипы": "music videos", "fashion-видео": "fashion films", "рилсы": "reels", "работа с актёрами": "directing actors", "раскадровка": "storyboards", "сценарий": "script", "концепция": "concept", "мудборды": "moodboards", "арт-дирекшн на площадке": "on-set art direction", "контроль кадра": "frame control", "визуальный стиль бренда": "brand visual identity", "закупки": "purchasing", "встреча команды": "meeting the team", "тайминг на площадке": "on-set schedule", "возврат вещей": "returns", "бюджеты кампаний": "campaign budgets", "переговоры с брендом": "brand negotiations", "подбор подрядчиков": "vendor sourcing", "площадка": "venue", "график смен": "shift schedule", "разрешения": "permits", "контроль расходов": "cost control", "тайминг": "schedule", "вызывные": "call sheets", "порядок сцен": "scene order", "дисциплина на площадке": "set discipline", "учёт дублей": "take logging", "монтажная непрерывность": "continuity", "модели": "models", "герои": "real people", "лонг-листы": "long lists", "пробы": "auditions", "договорённости с агентствами": "agency deals", "поиск локаций": "location scouting", "договор с площадкой": "venue contracts", "доставка": "delivery", "встреча людей": "greeting people", "сторис": "stories", "контент-план": "content plan", "съёмка на телефон": "phone shooting", "fashion": "fashion", "бьюти": "beauty", "предметка": "product", "портрет": "portrait", "репортаж": "reportage", "интерьер": "interiors", "еда": "food", "съёмка на плёнку": "film photography", "ретушь сам": "own retouching", "ивенты": "events", "монтирую сам": "own editing", "стабилизатор": "gimbal", "контент на телефон": "phone content", "монтаж в телефоне": "phone editing", "импульсный свет": "strobes", "постоянный свет": "continuous light", "свой свет": "own lights", "дым-машина": "haze machine", "световые схемы": "lighting setups", "свет": "lighting", "отражатели": "reflectors", "бэкапы": "backups", "сборка-разборка": "set-up and strike", "кинотехника": "cinema cameras", "фокус": "focus", "карточки": "cards", "сборка камеры": "camera build", "стедикам": "Steadicam", "роним": "Ronin", "проходы": "walk-and-talks", "тележка": "dolly", "кран": "crane", "риг на авто": "car rig", "съёмка в ноутбук": "tethered shooting", "превью клиенту": "client previews", "цвет на площадке": "on-set colour", "мониторы для клиента": "client monitors", "запись дублей": "take recording", "фото": "photo", "видео": "video", "рилсы со съёмки": "BTS reels", "сторис для бренда": "brand stories", "съёмка с воздуха": "aerial", "свой дрон": "own drone", "FPV": "FPV", "подбор образов": "styling", "закуп с возвратом": "refundable buying", "аренда вещей": "wardrobe rental", "свой гардероб": "own wardrobe", "работа с брендом": "brand collaboration", "шоурумы": "showrooms", "нюд": "nude", "вечерний": "evening", "графичный": "graphic", "бьюти крупным планом": "beauty close-ups", "грим для видео": "video make-up", "мужской грим": "men's grooming", "укладки": "styling", "плетения": "braids", "парики": "wigs", "ретро-укладки": "retro hair", "стрижка на площадке": "on-set haircuts", "дизайн": "nail art", "руки для крупных планов": "hand close-ups", "накладные ногти": "press-ons", "отпаривание": "steaming", "переодевания": "changes", "учёт вещей": "inventory", "одевание": "dressing", "учёт и возврат вещей": "inventory and returns", "пошив": "tailoring", "исторический костюм": "period costume", "кино и клипы": "film and music videos", "подгонка по фигуре": "fittings", "срочный ремонт": "quick repairs", "борода": "beard", "стрижка": "haircut", "раны и шрамы": "wounds and scars", "возраст": "ageing", "фантазийный грим": "fantasy make-up", "боди-арт": "body art", "коммерция": "commercial", "каталог": "catalogue", "маркетплейсы": "marketplaces", "руки и детали": "hands and details", "бельё": "lingerie", "плюс-сайз": "plus-size", "короткий метр": "short films", "говорю на камеру": "on-camera talking", "импровизация": "improv", "свой блог": "own blog", "интеграции": "sponsorships", "UGC": "UGC", "не модель": "non-model", "эксперт": "expert", "сотрудник бренда": "brand staff", "семья": "family", "современный танец": "modern dance", "хореография для клипов": "music video choreography", "contemporary": "contemporary", "хип-хоп": "hip-hop", "постановка движения": "movement direction", "позинг": "posing", "фон": "background", "подбор моделей": "model selection", "условия": "terms", "собаки": "dogs", "кошки": "cats", "лошади": "horses", "циклорама": "cyclorama", "интерьерные залы": "interior sets", "гримёрка": "make-up room", "парковка": "parking", "декорации": "sets", "фоны": "backdrops", "строительство сета": "set building", "эскизы": "sketches", "поиск реквизита": "prop sourcing", "аренда": "rental", "возврат": "returns", "изготовление": "prop making", "композиции": "arrangements", "инсталляции": "installations", "сухоцветы": "dried flowers", "наполнение кадра": "set dressing", "текстиль": "textiles", "расстановка": "arrangement", "конструкции": "structures", "покраска": "painting", "монтаж и демонтаж": "build and strike", "еда в кадре": "food on camera", "напитки": "drinks", "кондитерка": "pastry", "камеры": "cameras", "грип": "grip", "обеды на площадку": "set lunches", "кофе-брейк": "coffee breaks", "вегетарианское меню": "vegetarian menu", "перевозка команды": "crew transport", "перевозка техники": "gear transport", "минивэн": "minivan", "охрана техники": "gear security", "охрана вещей бренда": "brand goods security", "бьюти-ретушь": "beauty retouching", "частотка": "frequency separation", "коллажи": "composites", "субтитры": "subtitles", "вертикальный формат": "vertical video", "запись на площадке": "on-set recording", "петлички": "lavaliers", "бум": "boom", "сведение": "mixing", "цветокор видео": "video grading", "цвет фото": "photo colour", "LUT под бренд": "brand LUTs", "титры": "titles", "анимация": "animation", "3D": "3D", "упаковка рилсов": "reel packaging", "3D-продукт": "3D product", "композитинг": "compositing", "визуальные эффекты": "VFX", "музыка под ролик": "score", "саунд-дизайн": "sound design", "лицензии на музыку": "music licensing", "вёрстка": "layout", "обложки": "covers", "иллюстрации": "illustrations", "упаковка кампании": "campaign packaging", "лукбуки": "lookbooks", "кампании": "campaigns", "бартер": "barter", "love story": "love story", "семейная": "family", "для блога": "for a blog", "подарочный сертификат": "gift voucher", "SMM": "SMM", "модельное агентство": "model agency", "утверждение кадров": "shot approval", "контроль продукта": "product control", "цели кампании": "campaign goals", "запуск": "launch"};
+const SK_EN = {"брифы": "briefs", "сметы": "budgets", "кастинг": "casting", "локации": "locations", "ведение клиента": "client management", "договоры": "contracts", "бартер с брендами": "brand barter deals", "логистика": "logistics", "реклама": "commercials", "клипы": "music videos", "fashion-видео": "fashion films", "рилсы": "reels", "работа с актёрами": "directing actors", "раскадровка": "storyboards", "сценарий": "script", "концепция": "concept", "мудборды": "moodboards", "арт-дирекшн на площадке": "on-set art direction", "контроль кадра": "frame control", "визуальный стиль бренда": "brand visual identity", "закупки": "purchasing", "встреча команды": "meeting the team", "тайминг на площадке": "on-set schedule", "возврат вещей": "returns", "бюджеты кампаний": "campaign budgets", "переговоры с брендом": "brand negotiations", "подбор подрядчиков": "vendor sourcing", "площадка": "venue", "график смен": "shift schedule", "разрешения": "permits", "контроль расходов": "cost control", "тайминг": "schedule", "вызывные": "call sheets", "порядок сцен": "scene order", "дисциплина на площадке": "set discipline", "учёт дублей": "take logging", "монтажная непрерывность": "continuity", "модели": "models", "герои": "real people", "лонг-листы": "long lists", "пробы": "auditions", "договорённости с агентствами": "agency deals", "поиск локаций": "location scouting", "договор с площадкой": "venue contracts", "доставка": "delivery", "встреча людей": "greeting people", "сторис": "stories", "контент-план": "content plan", "съёмка на телефон": "phone shooting", "fashion": "fashion", "бьюти": "beauty", "предметка": "product", "портрет": "portrait", "репортаж": "reportage", "интерьер": "interiors", "еда": "food", "съёмка на плёнку": "film photography", "ретуширую сам": "own retouching", "работа на камеру": "on-camera work", "клиент бренда": "brand customer", "ивенты": "events", "монтирую сам": "own editing", "стабилизатор": "gimbal", "контент на телефон": "phone content", "монтаж в телефоне": "phone editing", "импульсный свет": "strobes", "постоянный свет": "continuous light", "свой свет": "own lights", "дым-машина": "haze machine", "световые схемы": "lighting setups", "свет": "lighting", "отражатели": "reflectors", "бэкапы": "backups", "сборка-разборка": "set-up and strike", "кинотехника": "cinema cameras", "фокус": "focus", "карточки": "cards", "сборка камеры": "camera build", "стедикам": "Steadicam", "роним": "Ronin", "проходы": "walk-and-talks", "тележка": "dolly", "кран": "crane", "риг на авто": "car rig", "съёмка в ноутбук": "tethered shooting", "превью клиенту": "client previews", "цвет на площадке": "on-set colour", "мониторы для клиента": "client monitors", "запись дублей": "take recording", "фото": "photo", "видео": "video", "рилсы со съёмки": "BTS reels", "сторис для бренда": "brand stories", "съёмка с воздуха": "aerial", "свой дрон": "own drone", "FPV": "FPV", "подбор образов": "styling", "закуп с возвратом": "refundable buying", "аренда вещей": "wardrobe rental", "свой гардероб": "own wardrobe", "работа с брендом": "brand collaboration", "шоурумы": "showrooms", "нюд": "nude", "вечерний": "evening", "графичный": "graphic", "бьюти крупным планом": "beauty close-ups", "грим для видео": "video make-up", "мужской грим": "men's grooming", "укладки": "styling", "плетения": "braids", "парики": "wigs", "ретро-укладки": "retro hair", "стрижка на площадке": "on-set haircuts", "дизайн": "nail art", "руки для крупных планов": "hand close-ups", "накладные ногти": "press-ons", "отпаривание": "steaming", "переодевания": "changes", "учёт вещей": "inventory", "одевание": "dressing", "учёт и возврат вещей": "inventory and returns", "пошив": "tailoring", "исторический костюм": "period costume", "кино и клипы": "film and music videos", "подгонка по фигуре": "fittings", "срочный ремонт": "quick repairs", "борода": "beard", "стрижка": "haircut", "раны и шрамы": "wounds and scars", "возраст": "ageing", "фантазийный грим": "fantasy make-up", "боди-арт": "body art", "коммерция": "commercial", "каталог": "catalogue", "маркетплейсы": "marketplaces", "руки и детали": "hands and details", "бельё": "lingerie", "плюс-сайз": "plus-size", "короткий метр": "short films", "говорю на камеру": "on-camera talking", "импровизация": "improv", "свой блог": "own blog", "интеграции": "sponsorships", "UGC": "UGC", "не модель": "non-model", "эксперт": "expert", "сотрудник бренда": "brand staff", "семья": "family", "современный танец": "modern dance", "хореография для клипов": "music video choreography", "contemporary": "contemporary", "хип-хоп": "hip-hop", "постановка движения": "movement direction", "позинг": "posing", "фон": "background", "подбор моделей": "model selection", "условия": "terms", "собаки": "dogs", "кошки": "cats", "лошади": "horses", "циклорама": "cyclorama", "интерьерные залы": "interior sets", "гримёрка": "make-up room", "парковка": "parking", "декорации": "sets", "фоны": "backdrops", "строительство сета": "set building", "эскизы": "sketches", "поиск реквизита": "prop sourcing", "аренда": "rental", "возврат": "returns", "изготовление": "prop making", "композиции": "arrangements", "инсталляции": "installations", "сухоцветы": "dried flowers", "наполнение кадра": "set dressing", "текстиль": "textiles", "расстановка": "arrangement", "конструкции": "structures", "покраска": "painting", "монтаж и демонтаж": "build and strike", "еда в кадре": "food on camera", "напитки": "drinks", "кондитерка": "pastry", "камеры": "cameras", "грип": "grip", "обеды на площадку": "set lunches", "кофе-брейк": "coffee breaks", "вегетарианское меню": "vegetarian menu", "перевозка команды": "crew transport", "перевозка техники": "gear transport", "минивэн": "minivan", "охрана техники": "gear security", "охрана вещей бренда": "brand goods security", "бьюти-ретушь": "beauty retouching", "частотка": "frequency separation", "коллажи": "composites", "субтитры": "subtitles", "вертикальный формат": "vertical video", "запись на площадке": "on-set recording", "петлички": "lavaliers", "бум": "boom", "сведение": "mixing", "цветокор видео": "video grading", "цвет фото": "photo colour", "LUT под бренд": "brand LUTs", "титры": "titles", "анимация": "animation", "3D": "3D", "упаковка рилсов": "reel packaging", "3D-продукт": "3D product", "композитинг": "compositing", "визуальные эффекты": "VFX", "музыка под ролик": "score", "саунд-дизайн": "sound design", "лицензии на музыку": "music licensing", "вёрстка": "layout", "обложки": "covers", "иллюстрации": "illustrations", "упаковка кампании": "campaign packaging", "лукбуки": "lookbooks", "кампании": "campaigns", "бартер": "barter", "love story": "love story", "семейная": "family", "для блога": "for a blog", "подарочный сертификат": "gift voucher", "SMM": "SMM", "модельное агентство": "model agency", "утверждение кадров": "shot approval", "контроль продукта": "product control", "цели кампании": "campaign goals", "запуск": "launch"};
 const skillName = (x) => (L() === 'en' ? SK_EN[x] || x : x);
 const roleName = (id) => (ROLE[id] ? (L() === 'en' ? ROLE[id].en : ROLE[id].ru) : (id || ''));
 const CLIENT_ROLES = ['brand', 'agency', 'client', 'brandrep', 'marketing'];
@@ -390,7 +393,7 @@ function vPro() {
     (SUB.payUrl ? '<a class="btn" href="' + esc(SUB.payUrl) + '" target="_blank" rel="noopener">' + T('Открыть оплату в банке', 'Open payment in your bank') + '</a>' : '<span class="small muted">' + T('Ссылка на оплату скоро появится', 'Payment link coming soon') + '</span>') +
     '<span class="tiny muted">' + T('Картой любого российского банка через приложение банка. Сумма — ', 'Any Russian bank card via your bank app. Amount: ') + money(SUB.price) + ' ₽</span></div>';
   h += '<div class="card"><h3>' + T('2. Напиши мне', '2. Message me') + '</h3><span class="small">' + T('Пришли скриншот оплаты и свой код:', 'Send the payment screenshot and your code:') + '</span><button class="btn soft mono" data-a="copyText" data-x="' + esc(S.deviceId) + '" style="font-size:22px;letter-spacing:0.08em">' + esc(S.deviceId) + '</button>' +
-    field(T('Твой номер телефона', 'Your phone number'), '<input class="inp" type="tel" inputmode="tel" autocomplete="tel" data-b="profile.phone" value="' + esc(S.profile.phone || '') + '" placeholder="+7 900 000-00-00">') +
+    field(T('Твой номер телефона', 'Your phone number'), '<input class="inp" type="tel" inputmode="tel" autocomplete="tel" data-b="profile.phone" value="' + esc(S.profile.phone || '') + '" placeholder="+7 900 000-00-00">') + '<span class="tiny muted pad4" style="margin-top:-10px">' + PHONE_HINT() + '</span>' +
     '<div class="grid2">' + (SUB.tg ? '<a class="btn" href="https://t.me/' + esc(SUB.tg) + '" target="_blank" rel="noopener">Telegram</a>' : '') + (SUB.wa ? '<a class="btn" href="https://wa.me/' + esc(SUB.wa) + '?text=' + encodeURIComponent(msg) + '" target="_blank" rel="noopener">WhatsApp</a>' : '') + '</div></div>';
   h += '<div class="card"><h3>' + T('3. Нажми ссылку из ответа', '3. Tap the link I send back') + '</h3><span class="small muted">' + T('Подписка включится на этом телефоне. Данные никуда не пропадут.', 'The subscription turns on for this phone. Your data stays.') + '</span><input class="inp mono" id="actCode" placeholder="' + T('или вставь код активации сюда', 'or paste the activation code') + '"><button class="btn soft" data-a="activateManual">' + T('Активировать', 'Activate') + '</button></div>';
   h += '<span class="tiny muted pad4">' + T('Съёмки, люди и доход остаются у тебя и без подписки — без неё нельзя только создавать новые проекты.', 'Without a subscription you keep all your data — you just can’t create new projects.') + '</span></div>' + nav('');
@@ -408,10 +411,10 @@ const TIPS = {
   today: ['Это главный экран: ближайшая съёмка и что важно сделать сейчас. «+» внизу — новая съёмка, аватар — твой профиль и доход.', 'Your home screen: the next shoot and what matters now. “+” below starts a new shoot; the avatar opens your profile and income.'],
   new: ['Выбери формат — от него зависят подсказки и разделы. Потом всё можно поменять.', 'Pick a format — it shapes hints and sections. You can change everything later.'],
   project: ['Здесь главное: дата, место, подготовка. Вкладки сверху — мудборд, тайминг, команда, образы, смета. «Отправить команде» собирает всё в одно сообщение.', 'The essentials: date, venue, prep. Tabs above: moodboard, schedule, team, looks, budget. “Send to the team” packs it all into one message.'],
-  mood: ['Добавь фото с телефона и ссылки на Pinterest. Команде всё уйдёт одной пачкой.', 'Add photos and Pinterest links. The team gets them in one go.'],
+  mood: ['Добавь фото с телефона и ссылки на Pinterest. Команде мудборд уходит одной картинкой А4 — её же можно распечатать.', 'Add photos and Pinterest links. The team gets them in one go.'],
   timing: ['Нажми «⋯» у строки — добавишь «до», «кто» и что идёт параллельно. В режиме площадки SET будет подсказывать по этому таймингу.', 'Tap “⋯” on a row to add “until”, “who” and what runs in parallel. On set, SET will prompt you along this schedule.'],
   team: ['Отмечай статус: позвали → идёт. «Написать» готовит приглашение с условиями. Ставки видишь только ты.', 'Track status: asked → in. “Message” drafts an invite with terms. Only you see rates.'],
-  looks: ['Образ — это модель, одежда, мейк, волосы и фото в одной карточке. На площадке они пойдут по очереди.', 'A look = model, outfit, make-up, hair and a photo on one card. On set they queue up in order.'],
+  looks: ['Образ — модель с фото, одежда, мейк и волосы в одной карточке. Из образов собирается лист А4 для площадки.', 'A look = model, outfit, make-up, hair and a photo on one card. On set they queue up in order.'],
   budget: ['Нажми на строку — количество, ставка и форма оплаты: деньги, бартер, сертификат. «Подтянуть команду» перенесёт людей сюда.', 'Tap a line for qty, rate and payment: money, barter, voucher. “Pull in the team” brings people here.'],
   onset: ['Режим площадки: что идёт сейчас, что дальше и образы по очереди. Экран не гаснет. Разреши уведомления — SET напомнит за 10 минут до каждого пункта, пока приложение открыто.', 'On-set mode: what’s now, what’s next and looks in order. The screen stays on. Allow notifications and SET reminds you 10 minutes before each item while the app is open.'],
   calendar: ['Пунктиром — съёмки не через SET. Добавляй их, чтобы ничего не наложилось и всё попало в доход.', 'Dashed = shoots outside SET. Log them so nothing overlaps and income adds up.'],
@@ -517,7 +520,8 @@ function vWelcome() {
     h += '<div class="chips">' + chip('Русский', S.lang === 'ru', 'lang', 'ru', 'sm') + chip('English', S.lang === 'en', 'lang', 'en', 'sm') + '</div>';
     h += '<h1>' + T('Давай<br>знакомиться', 'Nice to<br>meet you') + '</h1><p class="muted" style="margin:0">' + T('Заполнишь один раз — дальше всё подставится само', 'Fill this in once — the rest fills itself in') + '</p>';
     h += '<div class="grid2">' + field(T('Имя', 'Name'), inp('profile.name', p.name, { ph: T('Как к тебе обращаться', 'Your name') })) + field(T('Город', 'City'), inp('profile.city', p.city, { ph: T('Казань', 'City') })) + '</div>';
-    h += field(T('Номер телефона', 'Phone number'), '<input class="inp" type="tel" inputmode="tel" autocomplete="tel" data-b="profile.phone" value="' + esc(p.phone || '') + '" placeholder="+7 900 000-00-00">') + '<span class="tiny muted pad4" style="margin-top:-10px">' + T('Хранится в твоём телефоне. Нужен, чтобы подключить подписку и чтобы команда могла с тобой связаться.', 'Stays on your phone. Needed for the subscription and so the team can reach you.') + '</span>';
+    h += field(T('Номер телефона', 'Phone number'), '<input class="inp" type="tel" inputmode="tel" autocomplete="tel" data-b="profile.phone" value="' + esc(p.phone || '') + '" placeholder="+7 900 000-00-00">') + '<span class="tiny muted pad4" style="margin-top:-10px">' + PHONE_HINT() + ' ' + T('Нужен, чтобы подключить подписку и чтобы команда могла с тобой связаться.', 'Needed for the subscription and so the team can reach you.') + '</span>' +
+      field(T('Ник в Telegram', 'Telegram username'), '<input class="inp" data-b="profile.tg" data-tg="1" autocapitalize="off" autocorrect="off" value="' + esc(p.tg || '') + '" placeholder="@nick">');
     h += '<h2 style="margin-top:6px">' + T('Кто ты на съёмке?', 'What do you do on set?') + '</h2><span class="small muted pad4">' + T('Можно несколько', 'Pick as many as you like') + '</span>';
     ui.moreG = ui.moreG || {};
     GROUPS.forEach((g, gi) => {
@@ -555,7 +559,7 @@ function vWelcome() {
   if (done) {
     const rl = p.roles.map(roleName).concat(p.ownRole ? [p.ownRole] : []).join(' · ');
     h += '<div style="padding-top:24px" class="col"><h1>' + T('Готово', 'Done') + (p.name ? ',<br>' + esc(p.name) : '!') + '</h1><span class="muted">' + T('Твоя карточка', 'Your card') + '</span></div>';
-    h += '<div class="card glow-' + (ROLE[p.roles[0]]?.glow || 'pink') + '" style="border-radius:30px;padding:22px"><div class="row between"><span class="avatar" style="width:72px;height:72px;border-radius:36px;font-size:30px">' + esc(initials(p.name)) + '</span>' + (p.exp ? '<span class="badge">' + esc(T('опыт ', 'exp. ') + p.exp) + '</span>' : '') + '</div><span class="h1" style="font-size:34px">' + esc(p.name || T('Твоё имя', 'Your name')) + '</span><span>' + esc(rl || T('Роль не выбрана', 'No role yet')) + '</span>' + (p.insta ? '<b class="small">' + esc(p.insta.startsWith('@') ? p.insta : '@' + p.insta) + '</b>' : '') + (p.phone ? '<span class="small mono">' + esc(p.phone) + '</span>' : '') + '</div>';
+    h += '<div class="card glow-' + (ROLE[p.roles[0]]?.glow || 'pink') + '" style="border-radius:30px;padding:22px"><div class="row between"><span class="avatar" style="width:72px;height:72px;border-radius:36px;font-size:30px">' + esc(initials(p.name)) + '</span>' + (p.exp ? '<span class="badge">' + esc(T('опыт ', 'exp. ') + p.exp) + '</span>' : '') + '</div><span class="h1" style="font-size:34px">' + esc(p.name || T('Твоё имя', 'Your name')) + '</span><span>' + esc(rl || T('Роль не выбрана', 'No role yet')) + '</span>' + (p.insta ? '<b class="small">' + esc(p.insta.startsWith('@') ? p.insta : '@' + p.insta) + '</b>' : '') + (p.tg ? '<span class="small">Telegram ' + esc(tgNick(p.tg)) + '</span>' : '') + (p.phone ? '<span class="small mono">' + esc(p.phone) + '</span>' : '') + '</div>';
   }
   h += '</div>';
   h += '<div class="cta nonav">';
@@ -735,20 +739,35 @@ function pTeam(s) {
   h += '<span class="lock pad4">' + I.lock + T('Ставки видишь только ты. Каждый получает только своё.', 'Only you see rates.') + '</span>';
   return h;
 }
+function lookSlot(s, l, key, label) {
+  if (l[key]) return '<div style="position:relative">' + imgTag(l[key], 'width:100%;aspect-ratio:3/4;object-fit:cover;border-radius:18px;display:block') + '<span class="tiny" style="position:absolute;left:8px;top:8px;background:rgba(255,255,255,.85);border-radius:10px;padding:2px 8px">' + esc(label) + '</span><button class="chip sm" style="position:absolute;right:8px;bottom:8px" data-a="delLookImg" data-s="' + s.id + '" data-x="' + l.id + '|' + key + '">' + T('Убрать', 'Remove') + '</button></div>';
+  return '<button class="btn soft" style="min-height:96px;height:auto;flex-direction:column;border-radius:18px;white-space:normal" data-a="pickLookImg" data-s="' + s.id + '" data-x="' + l.id + '|' + key + '">+ ' + esc(label) + '</button>';
+}
 function pLooks(s) {
   let h = '';
-  if (!s.looks.length) h += '<div class="empty">' + T('Образ — это одежда, модель, мейк и волосы в одной карточке', 'A look = outfit, model, make-up and hair on one card') + '</div>';
+  if (!s.looks.length) h += '<div class="empty">' + T('Добавь образ: кто модель, что надевает, какой мейк и волосы. Для бьюти-съёмки хватит модели и мейка — остальное можно не заполнять.', 'Add a look: model, outfit, make-up, hair. For beauty, model and make-up are enough.') + '</div>';
+  ui.lookOpen = ui.lookOpen || {};
   s.looks.forEach((l, i) => {
     const b = 'shoot:' + s.id + '.looks:' + l.id;
+    const extra = ['params', 'shoes', 'acc', 'hairby', 'shots', 'note', 'time', 'name', 'ref'].some((k) => l[k]) || (l.pics || []).length;
+    const open = ui.lookOpen[l.id] || extra;
     h += '<div class="card ' + (i % 2 ? 'glow-sky' : 'glow-pink') + '"><div class="row between"><span class="look-num">' + T('Образ', 'Look') + ' ' + pad(i + 1) + '</span><div class="row"><button class="chip sm" aria-pressed="' + !!l.done + '" data-a="toggleLook" data-s="' + s.id + '" data-x="' + l.id + '">' + (l.done ? T('✓ снят', '✓ shot') : T('не снят', 'to shoot')) + '</button><button class="textbtn" data-a="delRow" data-s="' + s.id + '" data-x="looks|' + l.id + '" aria-label="' + T('Удалить образ', 'Delete look') + '">' + I.trash.replace('<svg', '<svg width="18" height="18"') + '</button></div></div>' +
-      (l.img ? '<div style="position:relative">' + imgTag(l.img, 'width:100%;max-height:320px;object-fit:cover;border-radius:18px;display:block') + '<button class="chip sm" style="position:absolute;right:8px;bottom:8px" data-a="delLookImg" data-s="' + s.id + '" data-x="' + l.id + '">' + T('Убрать фото', 'Remove photo') + '</button></div>' : '<button class="btn soft sm" data-a="pickLookImg" data-s="' + s.id + '" data-x="' + l.id + '">' + T('+ Фото образа или референс', '+ Look photo or reference') + '</button>') +
-      inp(b + '.name', l.name, { ph: T('Название: «Нежный беж»', 'Name: “Soft beige”'), aria: T('Название образа', 'Look name') }) +
-      '<div class="grid2">' + field(T('Модель', 'Model'), inp(b + '.model', l.model, { r: true })) + field(T('Мейк делает', 'Make-up by'), inp(b + '.mua', l.mua)) + '</div>' +
-      field(T('Одежда', 'Clothes'), inp(b + '.clothes', l.clothes, { ph: T('платье, туфли, серьги', 'dress, shoes, earrings') })) +
-      '<div class="grid2">' + field(T('Мейк', 'Make-up'), inp(b + '.makeup', l.makeup, { ph: T('нюд', 'nude') })) + field(T('Волосы', 'Hair'), inp(b + '.hair', l.hair, { ph: T('гладкий пучок', 'sleek bun') })) + '</div>' +
-      field(T('Референс (ссылка)', 'Reference (link)'), inp(b + '.ref', l.ref, { ph: 'pinterest.com/…' })) + '</div>';
+      '<div class="grid2">' + field(T('Модель', 'Model'), inp(b + '.model', l.model, { r: true, ph: T('Имя модели', 'Model name') })) + field(T('Визажист', 'Make-up artist'), inp(b + '.mua', l.mua)) + '</div>' +
+      '<div class="grid2">' + lookSlot(s, l, 'mimg', T('Фото модели', 'Model photo')) + lookSlot(s, l, 'img', T('Фото образа', 'Look photo')) + '</div>' +
+      field(T('Одежда', 'Outfit'), inp(b + '.clothes', l.clothes, { ph: T('платье, жакет, серьги', 'dress, jacket, earrings') })) +
+      '<div class="grid2">' + field(T('Мейк', 'Make-up'), inp(b + '.makeup', l.makeup)) + field(T('Волосы', 'Hair'), inp(b + '.hair', l.hair)) + '</div>';
+    if (!open) h += '<button class="textbtn" style="align-self:flex-start" data-a="lookMore" data-x="' + l.id + '">' + T('+ Обувь, аксессуары, шот-лист, параметры', '+ Shoes, accessories, shot list, sizes') + '</button>';
+    else h += field(T('Параметры модели', 'Model sizes'), inp(b + '.params', l.params, { ph: T('рост 178 · одежда S · обувь 39', 'height 178 · size S · shoe 39') })) +
+      '<div class="grid2">' + field(T('Обувь', 'Shoes'), inp(b + '.shoes', l.shoes)) + field(T('Аксессуары', 'Accessories'), inp(b + '.acc', l.acc)) + '</div>' +
+      '<div class="col" style="gap:6px"><span class="tiny muted">' + T('Ещё фото: обувь, аксессуары, детали', 'More photos: shoes, accessories, details') + '</span><div class="grid3">' + (l.pics || []).map((id) => '<div style="position:relative">' + imgTag(id, 'width:100%;aspect-ratio:1;object-fit:cover;border-radius:14px;display:block') + '<button class="chip sm" style="position:absolute;right:4px;bottom:4px;min-height:30px;padding:0 8px" data-a="delLookPic" data-s="' + s.id + '" data-x="' + l.id + '|' + id + '" aria-label="' + T('Убрать', 'Remove') + '">×</button></div>').join('') + ((l.pics || []).length < 3 ? '<button class="btn soft" style="aspect-ratio:1;height:auto;border-radius:14px" data-a="pickLookImg" data-s="' + s.id + '" data-x="' + l.id + '|pics">+</button>' : '') + '</div></div>' +
+      '<div class="grid2">' + field(T('Волосы делает', 'Hair by'), inp(b + '.hairby', l.hairby)) + field(T('Время', 'Time'), inp(b + '.time', l.time, { ph: '12:30' })) + '</div>' +
+      field(T('Шот-лист — каждый кадр с новой строки', 'Shot list — one shot per line'), '<textarea class="inp" data-b="' + esc(b + '.shots') + '" rows="3" placeholder="' + T('в рост на циклораме\nкрупно: серьги\nв движении', 'full length\nclose-up: earrings\nmovement') + '">' + esc(l.shots || '') + '</textarea>') +
+      field(T('Важно', 'Important'), inp(b + '.note', l.note, { ph: T('например: снять свои украшения', 'e.g. remove personal jewellery') })) +
+      '<div class="grid2">' + field(T('Название образа', 'Look name'), inp(b + '.name', l.name, { aria: T('Название образа', 'Look name') })) + field(T('Референс (ссылка)', 'Reference (link)'), inp(b + '.ref', l.ref, { ph: 'pinterest.com/…' })) + '</div>';
+    h += '</div>';
   });
   h += '<button class="btn soft" data-a="addLook" data-s="' + s.id + '">' + T('+ Образ', '+ Look') + '</button>';
+  if (s.looks.length) h += '<button class="btn" data-a="lookSheet" data-s="' + s.id + '">' + T('Карточки образов для печати', 'Look cards to print') + '</button><span class="tiny muted pad4">' + T('Как на показах: каждый образ на своём листе А4 — модель, фото, одежда, мейк, волосы, кадры. Отправь команде или распечатай и повесь на рейл.', 'Like backstage: one look per A4 page. Send it or print it for the rail.') + '</span>';
   return h;
 }
 function pBudget(s) {
@@ -777,9 +796,9 @@ function printHtml(s) {
   let h = '<div class="printarea show"><div style="display:flex;justify-content:space-between;align-items:flex-end;gap:10px"><div><div style="font-family:Neucha,var(--head);font-size:22px">set</div><h1 style="margin:6px 0 0;font-family:var(--head);font-weight:500;letter-spacing:-0.03em;line-height:1">' + esc(titleOf(s)) + '</h1></div><div style="text-align:right;font-size:12px">' + (s.date ? '<b style="font-size:16px">' + esc(fmtDate(s.date, { wd: true, year: true })) + '</b><br>' : '') + T('сбор', 'call') + ' ' + esc(s.call) + ' · ' + T('конец', 'wrap') + ' ' + esc(s.end) + '</div></div>';
   if (s.place || s.address) h += '<p style="margin:10px 0 0"><b>' + esc(s.place) + '</b> ' + esc(s.address) + '</p>';
   if (s.timing.length) h += '<h3 style="margin-top:16px">' + T('Тайминг', 'Schedule') + '</h3><table><tbody>' + sortedTiming(s).map((x) => '<tr><td style="width:92px;font-family:var(--mono)">' + esc(x.t) + (x.t2 ? '–' + esc(x.t2) : '') + '</td><td><b>' + esc(x.w) + '</b>' + (x.det ? '<br><span style="color:#555">' + esc(x.det) + '</span>' : '') + '</td><td>' + esc(x.who || '') + '</td></tr>').join('') + '</tbody></table>';
-  if (s.team.length) h += '<h3 style="margin-top:16px">' + T('Команда', 'Team') + '</h3><table><thead><tr><th>' + T('Имя', 'Name') + '</th><th>' + T('Роль', 'Role') + '</th><th>' + T('Сбор', 'Call') + '</th><th>' + T('Связь', 'Contact') + '</th></tr></thead><tbody>' + s.team.map((m) => '<tr><td>' + esc(m.name) + '</td><td>' + esc(roleName(m.role)) + '</td><td style="font-family:var(--mono)">' + esc(m.call || s.call) + '</td><td>' + esc(S.people.find((p) => p.id === m.pid)?.phone || '') + '</td></tr>').join('') + '</tbody></table>';
+  if (s.team.length) h += '<h3 style="margin-top:16px">' + T('Команда', 'Team') + '</h3><table><thead><tr><th>' + T('Имя', 'Name') + '</th><th>' + T('Роль', 'Role') + '</th><th>' + T('Сбор', 'Call') + '</th><th>' + T('Связь', 'Contact') + '</th></tr></thead><tbody>' + s.team.map((m) => '<tr><td>' + esc(m.name) + '</td><td>' + esc(roleName(m.role)) + '</td><td style="font-family:var(--mono)">' + esc(m.call || s.call) + '</td><td>' + esc((() => { const p = S.people.find((x) => x.id === m.pid); return [tgNick(p?.tg), p?.phone].filter(Boolean).join(' · '); })()) + '</td></tr>').join('') + '</tbody></table>';
   const food = teamFood(s); if (food) h += '<p style="margin-top:10px"><b>' + T('Еда', 'Food') + ':</b> ' + esc(food) + '</p>';
-  if (s.modules.looks && s.looks.length) h += '<h3 class="pb" style="margin-top:16px">' + T('Образы', 'Looks') + '</h3><div class="looks">' + s.looks.map((l, i) => '<div class="look">' + (l.img ? imgTag(l.img, 'width:100%;height:150px;object-fit:cover;border-radius:6px;margin-bottom:6px') : '') + '<div style="font-family:var(--mono);font-size:11px">' + T('ОБРАЗ', 'LOOK') + ' ' + pad(i + 1) + '</div><b style="font-size:15px">' + esc(l.name || '—') + '</b><br>' + T('Модель', 'Model') + ': ' + esc(l.model || '—') + '<br>' + T('Одежда', 'Clothes') + ': ' + esc(l.clothes || '—') + '<br>' + T('Мейк', 'Make-up') + ': ' + esc(l.makeup || '—') + (l.mua ? ' (' + esc(l.mua) + ')' : '') + '<br>' + T('Волосы', 'Hair') + ': ' + esc(l.hair || '—') + '<div style="margin-top:6px">☐ ' + T('снят', 'shot') + '</div></div>').join('') + '</div>';
+  if (s.modules.looks && s.looks.length) h += '<h3 class="pb" style="margin-top:16px">' + T('Образы', 'Looks') + '</h3><div class="looks">' + s.looks.map((l, i) => '<div class="look">' + ((l.mimg || l.img) ? '<div style="display:flex;gap:6px;margin-bottom:6px">' + [l.mimg, l.img].filter(Boolean).map((x) => imgTag(x, 'flex:1;min-width:0;height:150px;object-fit:cover;border-radius:6px')).join('') + '</div>' : '') + '<div style="font-family:var(--mono);font-size:11px">' + T('ОБРАЗ', 'LOOK') + ' ' + pad(i + 1) + '</div><b style="font-size:15px">' + esc(l.name || '—') + '</b><br>' + T('Модель', 'Model') + ': ' + esc(l.model || '—') + '<br>' + T('Одежда', 'Clothes') + ': ' + esc(l.clothes || '—') + '<br>' + T('Мейк', 'Make-up') + ': ' + esc(l.makeup || '—') + (l.mua ? ' · ' + T('визажист', 'MUA') + ' ' + esc(l.mua) : '') + '<br>' + T('Волосы', 'Hair') + ': ' + esc(l.hair || '—') + (l.shoes ? '<br>' + T('Обувь', 'Shoes') + ': ' + esc(l.shoes) : '') + (l.acc ? '<br>' + T('Аксессуары', 'Accessories') + ': ' + esc(l.acc) : '') + (l.note ? '<br><b style="color:#B4271B">! ' + esc(l.note) + '</b>' : '') + '<div style="margin-top:6px">☐ ' + T('снят', 'shot') + '</div></div>').join('') + '</div>';
   const mp = (s.mood || []).filter((x) => x.kind === 'img'); const ml = (s.mood || []).filter((x) => x.kind === 'link');
   if (mp.length || ml.length) h += '<h3 class="pb" style="margin-top:16px">' + T('Мудборд', 'Moodboard') + '</h3><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px">' + mp.map((x) => imgTag(x.id, 'width:100%;aspect-ratio:3/4;object-fit:cover;border-radius:8px')).join('') + '</div>' + (ml.length ? '<p style="font-size:11px;word-break:break-all">' + ml.map((x) => esc(x.url)).join('<br>') + '</p>' : '');
   if (s.notes) h += '<p style="margin-top:14px;white-space:pre-line"><b>' + T('Заметки', 'Notes') + ':</b> ' + esc(s.notes) + '</p>';
@@ -788,7 +807,8 @@ function printHtml(s) {
 }
 function vPrint(id) {
   const s = getShoot(id); if (!s) return vNotFound();
-  return '<div class="screen" style="padding-bottom:0"><div class="top">' + backBtn('#/p/' + s.id) + '<span class="kicker">' + T('Лист на площадку', 'Set sheet') + '</span><span style="width:44px"></span></div><span class="small muted pad4">' + T('Тайминг, команда и образы на А4. Смета и ставки сюда не попадают.', 'Schedule, team and looks on A4. No money on it.') + '</span></div>' + printHtml(s) +
+  return '<div class="screen" style="padding-bottom:0"><div class="top">' + backBtn('#/p/' + s.id) + '<span class="kicker">' + T('Лист на площадку', 'Set sheet') + '</span><span style="width:44px"></span></div><span class="small muted pad4">' + T('Тайминг, команда и образы на А4. Смета и ставки сюда не попадают.', 'Schedule, team and looks on A4. No money on it.') + '</span>' +
+    '<div class="grid2" style="margin-top:10px">' + (s.looks.length ? '<button class="btn soft" data-a="lookSheet" data-s="' + s.id + '">' + T('Карточки образов', 'Look cards') + '</button>' : '') + ((s.mood || []).some((x) => x.kind === 'img') ? '<button class="btn soft" data-a="moodSheet" data-s="' + s.id + '">' + T('Мудборд картинкой', 'Moodboard image') + '</button>' : '') + '</div></div>' + printHtml(s) +
     '<div class="cta nonav"><button class="btn big grow" data-a="print">' + T('Распечатать или PDF', 'Print or save PDF') + '</button><button class="btn ghost" style="min-height:60px;border-radius:26px" data-a="shareTeam" data-s="' + s.id + '">' + T('Текстом', 'As text') + '</button></div>';
 }
 
@@ -820,7 +840,7 @@ function vOnSet(id) {
   if (!looks.length) h += '<div class="hint"><span class="dot"></span><span>' + T('Добавь образы в проекте — здесь они пойдут по очереди.', 'Add looks in the project — they’ll queue here.') + '</span></div>';
   if (cur) {
     const i = looks.indexOf(cur);
-    h += '<div style="background:radial-gradient(circle at 88% 8%, rgba(244,161,195,0.5), rgba(244,161,195,0.12) 45%, transparent 70%), #232328;border-radius:28px;padding:24px;display:flex;flex-direction:column;gap:8px"><span class="mono small" style="color:#C9C5BB">' + T('СЕЙЧАС · ОБРАЗ ', 'NOW · LOOK ') + pad(i + 1) + '</span>' + (cur.img ? imgTag(cur.img, 'width:100%;max-height:300px;object-fit:cover;border-radius:18px;display:block;margin:4px 0') : '') + '<span class="h1" style="font-size:44px">' + esc(cur.name || T('Образ ', 'Look ') + pad(i + 1)) + '</span><span>' + esc([cur.model, cur.clothes].filter(Boolean).join(' · ')) + '</span><span class="small" style="color:#C9C5BB">' + esc([cur.makeup && T('мейк: ', 'make-up: ') + cur.makeup, cur.hair && T('волосы: ', 'hair: ') + cur.hair].filter(Boolean).join(' · ')) + '</span></div>';
+    h += '<div style="background:radial-gradient(circle at 88% 8%, rgba(244,161,195,0.5), rgba(244,161,195,0.12) 45%, transparent 70%), #232328;border-radius:28px;padding:24px;display:flex;flex-direction:column;gap:8px"><span class="mono small" style="color:#C9C5BB">' + T('СЕЙЧАС · ОБРАЗ ', 'NOW · LOOK ') + pad(i + 1) + '</span>' + (cur.img ? imgTag(cur.img, 'width:100%;max-height:300px;object-fit:cover;border-radius:18px;display:block;margin:4px 0') : '') + '<span class="h1" style="font-size:44px">' + esc(cur.name || T('Образ ', 'Look ') + pad(i + 1)) + '</span><span>' + esc([cur.model, cur.clothes].filter(Boolean).join(' · ')) + '</span><span class="small" style="color:#C9C5BB">' + esc([cur.makeup && T('мейк: ', 'make-up: ') + cur.makeup, cur.hair && T('волосы: ', 'hair: ') + cur.hair].filter(Boolean).join(' · ')) + '</span>' + (cur.note ? '<b class="small" style="color:#F4A1C3">! ' + esc(cur.note) + '</b>' : '') + (String(cur.shots || '').trim() ? '<div class="col" style="gap:4px;margin-top:6px"><span class="mono tiny" style="color:#C9C5BB">' + T('КАДРЫ', 'SHOTS') + '</span>' + String(cur.shots).split('\n').map((x) => x.trim()).filter(Boolean).map((x) => '<span class="small">☐ ' + esc(x) + '</span>').join('') + '</div>' : '') + '</div>';
     const nx = left[1];
     if (nx) h += '<span class="small pad4" style="color:#9A968C">' + T('Следом: ', 'Then: ') + esc(nx.name || T('образ ', 'look ') + pad(looks.indexOf(nx) + 1)) + (nx.model ? ' · ' + esc(nx.model) + T(' — пора на грим', ' — to make-up') : '') + '</span>';
   } else if (looks.length) {
@@ -930,7 +950,7 @@ const pickK = (o, ks) => { const r = {}; ks.forEach((k) => { if (o && o[k] != nu
 // what the team gets: no budget, no checklist, no notes, no one else's money
 function shareSnapshot(s, memberId) {
   if (!s.shareId) s.shareId = uid() + uid();
-  return { v: 1, sid: s.shareId, u: Date.now(), from: pickK(S.profile, ['name', 'phone']), me: memberId || '',
+  return { v: 1, sid: s.shareId, u: Date.now(), from: pickK(S.profile, ['name', 'phone', 'tg']), me: memberId || '',
     s: { ...pickK(s, ['kind', 'client', 'what', 'date', 'call', 'end', 'place', 'address']),
       modules: { team: !!s.modules.team, timing: !!s.modules.timing, looks: !!s.modules.looks, mood: s.modules.mood !== false },
       timing: (s.timing || []).map((x) => pickK(x, ['id', 't', 't2', 'w', 'who', 'det'])),
@@ -982,7 +1002,7 @@ function vGuest(s) {
   if (s.team && s.team.length) h += '<h3 class="pad4">' + T('Команда', 'Team') + '</h3><div class="card tight">' + s.team.map((m) => '<div class="li"><span class="avatar sm soft">' + esc(initials(m.name)) + '</span><span class="grow"><b style="font-weight:600">' + esc(m.name) + (m.id === g.me ? T(' · это ты', ' · you') : '') + '</b><br><span class="tiny muted">' + esc(roleName(m.role)) + (m.call ? ' · ' + T('сбор ', 'call ') + esc(m.call) : '') + '</span></span></div>').join('') + '</div>';
   h += '<span class="tiny muted pad4">' + T('Когда ' + (from.name || 'продюсер') + ' что-то поменяет, придёт новая ссылка — открой её, и проект здесь обновится.', 'When the producer changes something you’ll get a new link — open it and this project updates.') + '</span>';
   h += '<button class="btn ghost" data-a="guestDelete" data-s="' + s.id + '">' + T('Убрать проект у себя', 'Remove from my SET') + '</button>';
-  h += '</div><div class="cta">' + (s.timing && s.timing.length ? '<a class="btn big grow" href="#/p/' + s.id + '/onset">' + T('Режим площадки', 'On set') + '</a>' : '') + (from.phone ? '<a class="btn ghost" style="min-height:60px;border-radius:26px" href="tel:' + esc(String(from.phone).replace(/[^\d+]/g, '')) + '">' + T('Позвонить', 'Call') + '</a>' : '') + '</div>' + nav('projects');
+  h += '</div><div class="cta">' + (s.timing && s.timing.length ? '<a class="btn big grow" href="#/p/' + s.id + '/onset">' + T('Режим площадки', 'On set') + '</a>' : '') + (from.tg ? '<a class="btn ghost" style="min-height:60px;border-radius:26px" href="https://t.me/' + esc(tgNick(from.tg).slice(1)) + '" target="_blank" rel="noopener">Telegram</a>' : '') + (from.phone ? '<a class="btn ghost" style="min-height:60px;border-radius:26px" href="tel:' + esc(String(from.phone).replace(/[^\d+]/g, '')) + '">' + T('Позвонить', 'Call') + '</a>' : '') + '</div>' + nav('projects');
   return h;
 }
 
@@ -1066,7 +1086,7 @@ function vSheet() {
       (['money', 'mix'].includes(m.pay || 'money') ? '<div class="grid2">' + field(T('Ставка, ₽', 'Rate'), '<input class="inp mono" inputmode="numeric" id="mRate" value="' + esc(m.rate) + '">') + field(T('За', 'Per'), '<select class="inp" id="mUnit">' + UNITS.map((u) => '<option value="' + u[0] + '"' + ((m.unit || 'смена') === u[0] ? ' selected' : '') + '>' + esc(L() === 'en' ? u[1] : u[0]) + '</option>').join('') + '</select>') + '</div>' : '') +
       (['barter', 'cert', 'mix'].includes(m.pay) ? field(T('Бартер / сертификат: на сколько, ₽', 'Barter / voucher value'), '<input class="inp mono" inputmode="numeric" id="mBarter" value="' + esc(m.barter || '') + '">') : '') +
       field(T('Заметка', 'Note'), '<input class="inp" id="mNote" value="' + esc(m.note || '') + '" placeholder="' + T('монтаж входит, привозит свой свет…', 'editing included, brings own light…') + '">') +
-      (sh.isNew ? '<div class="grid2">' + field(T('Телефон', 'Phone'), '<input class="inp" type="tel" id="mPhone">') + field('Instagram', '<input class="inp" id="mInsta" placeholder="@">') + '</div>' : '') +
+      (sh.isNew ? field(T('Телефон', 'Phone'), '<input class="inp" type="tel" inputmode="tel" id="mPhone" placeholder="+7 900 000-00-00" value="' + esc(sh.phone || '') + '">') + '<div class="grid2">' + field('Telegram', '<input class="inp" id="mTg" data-tg="1" autocapitalize="off" placeholder="@nick" value="' + esc(sh.tg || '') + '">') + field('Instagram', '<input class="inp" id="mInsta" placeholder="@" value="' + esc(sh.insta || '') + '">') + '</div>' : '') +
       '<button class="btn big" data-a="saveMember">' + T('Сохранить', 'Save') + '</button>' + (!sh.isNew ? '<button class="btn danger" data-a="removeMember">' + T('Убрать из проекта', 'Remove from project') + '</button>' : '');
   }
   if (sh.type === 'pick') {
@@ -1080,7 +1100,8 @@ function vSheet() {
     const p = sh.data;
     h += '<div class="row between"><h2>' + (sh.isNew ? T('Новый человек', 'New person') : esc(p.name)) + '</h2><button class="iconbtn" data-a="closeSheet" aria-label="' + T('Закрыть', 'Close') + '">' + I.x + '</button></div>' +
       field(T('Имя', 'Name'), '<input class="inp" id="pName" value="' + esc(p.name) + '">') + field(T('Роль', 'Role'), roleSelect('', p.role).replace('data-b=""', 'id="pRole"')) +
-      '<div class="grid2">' + field(T('Телефон', 'Phone'), '<input class="inp" type="tel" id="pPhone" value="' + esc(p.phone || '') + '">') + field('Instagram', '<input class="inp" id="pInsta" value="' + esc(p.insta || '') + '" placeholder="@">') + '</div>' +
+      field(T('Телефон', 'Phone'), '<input class="inp" type="tel" inputmode="tel" id="pPhone" value="' + esc(p.phone || '') + '" placeholder="+7 900 000-00-00">') +
+      '<div class="grid2">' + field('Telegram', '<input class="inp" id="pTg" data-tg="1" autocapitalize="off" value="' + esc(p.tg || '') + '" placeholder="@nick">') + field('Instagram', '<input class="inp" id="pInsta" value="' + esc(p.insta || '') + '" placeholder="@">') + '</div>' +
       '<div class="col"><span class="tiny muted">' + T('Не ест', 'Food') + '</span><div class="chips">' + FOOD.slice(1).map((f) => '<button class="chip sm" data-a="togglePFood" data-x="' + f[0] + '" aria-pressed="' + (p.food || []).includes(f[0]) + '">' + esc(L() === 'en' ? f[2] : f[1]) + '</button>').join('') + '</div></div>' +
       field(T('Заметка', 'Note'), '<textarea class="inp" id="pNote" placeholder="' + T('Размеры, рост, что важно знать', 'Sizes, notes') + '">' + esc(p.note || '') + '</textarea>') +
       '<button class="btn big" data-a="savePerson">' + T('Сохранить', 'Save') + '</button>' + (!sh.isNew ? '<button class="btn danger" data-a="deletePerson">' + T('Удалить из базы', 'Delete') + '</button>' : '');
@@ -1114,6 +1135,15 @@ function vSheet() {
       (showB ? field(T('Бартер / сертификат, ₽ — сколько стоит', 'Barter / voucher value'), '<input class="inp mono" inputmode="numeric" id="lBarter" value="' + esc(x.barter) + '">') : '') +
       sw(T('Под вопросом', 'Open question'), T('ещё не согласовано или ждём сумму', 'not agreed yet or waiting for a number'), x.q, 'lineQ', '') +
       '<button class="btn big" data-a="saveLine">' + T('Сохранить', 'Save') + '</button>' + (!sh.isNew ? '<button class="btn danger" data-a="deleteLine">' + T('Удалить строку', 'Delete line') + '</button>' : '');
+  }
+  if (sh.type === 'out') {
+    h += '<div class="row between"><h2>' + esc(sh.title) + '</h2><button class="iconbtn" data-a="closeSheet" aria-label="' + T('Закрыть', 'Close') + '">' + I.x + '</button></div>';
+    if (sh.kind === 'looks' || sh.kind === 'looks4') h += '<div class="seg">' + chip(T('По образу на лист', 'One look per page'), sh.kind === 'looks', 'outMode', 'looks', 'sm') + chip(T('Все на одном листе', 'All on one page'), sh.kind === 'looks4', 'outMode', 'looks4', 'sm') + '</div>';
+    if (!sh.urls) h += '<div class="empty">' + T('Собираю лист…', 'Building the sheet…') + '</div>';
+    else h += sh.urls.map((u, i) => '<img src="' + u + '" alt="' + esc(sh.title) + ' ' + (i + 1) + '" style="width:100%;border-radius:12px;display:block;box-shadow:0 2px 14px rgba(0,0,0,.12)">').join('') +
+      (sh.urls.length > 1 ? '<span class="tiny muted">' + T('Страниц: ', 'Pages: ') + sh.urls.length + '</span>' : '') +
+      '<button class="btn big" data-a="outShare">' + T('Отправить или распечатать', 'Send or print') + '</button><button class="btn soft" data-a="outSave">' + T('Сохранить картинку', 'Save image') + '</button>' +
+      '<span class="tiny muted">' + T('Распечатать: «Отправить» → «Напечатать». Формат А4, смета и ставки сюда не попадают.', 'To print: Send → Print. A4, no money on it.') + '</span>';
   }
   if (sh.type === 'img') {
     h += '<div class="row between"><h2>' + T('Референс', 'Reference') + '</h2><button class="iconbtn" data-a="closeSheet" aria-label="' + T('Закрыть', 'Close') + '">' + I.x + '</button></div>' + imgTag(sh.id, 'width:100%;border-radius:18px;display:block') + '<button class="btn danger" data-a="delMood" data-s="' + sh.s + '" data-x="' + sh.id + '">' + T('Убрать из мудборда', 'Remove') + '</button>';
@@ -1288,7 +1318,7 @@ const A = {
   toggleNewMod: (el) => { ui.newMods[el.dataset.x] = !ui.newMods[el.dataset.x]; render(); },
   toggleCheck: (el) => { const s = getShoot(el.dataset.s); const c = s.checklist.find((x) => x.id === el.dataset.x); c.done = !c.done; save(); render(); },
   addCheck: (el) => { const s = getShoot(el.dataset.s); const v = $('#newCheck').value.trim(); if (!v) return; s.checklist.push({ id: uid(), text: v, done: false }); save(); render(); $('#newCheck')?.focus(); },
-  delRow: (el) => { const s = getShoot(el.dataset.s); const [arr, id] = el.dataset.x.split('|'); if (arr === 'looks' && !confirm(T('Удалить образ?', 'Delete this look?'))) return; s[arr] = s[arr].filter((x) => x.id !== id); save(); render(); },
+  delRow: (el) => { const s = getShoot(el.dataset.s); const [arr, id] = el.dataset.x.split('|'); if (arr === 'looks' && !confirm(T('Удалить образ?', 'Delete this look?'))) return; if (arr === 'looks') { const l = s.looks.find((x) => x.id === id); if (l) { if (l.img) mDel(l.img); if (l.mimg) mDel(l.mimg); (l.pics || []).forEach(mDel); } } s[arr] = s[arr].filter((x) => x.id !== id); save(); render(); },
   useTemplate: (el) => { const s = getShoot(el.dataset.s); s.timing = genTiming(s); save(); render(); },
   tlToggle: (el) => { ui.tlOpen = ui.tlOpen === el.dataset.x ? null : el.dataset.x; render(); },
   clearTiming: (el) => { if (!confirm(T('Удалить все строки тайминга?', 'Clear the whole schedule?'))) return; const s = getShoot(el.dataset.s); s.timing = []; save(); render(); },
@@ -1317,6 +1347,10 @@ const A = {
     if (navigator.canShare && navigator.canShare({ files: [rcFile] })) { try { await navigator.share({ files: [rcFile] }); } catch (e) { /* cancelled */ } return; }
     rcDownload(); toast(T('Картинка сохранена — выложи её в сторис', 'Saved — post it to your story'));
   },
+  lookSheet: (el) => makeOut(el.dataset.s, 'looks'),
+  moodSheet: (el) => makeOut(el.dataset.s, 'mood'),
+  outShare: async () => { const f = ui.sheet?.files; if (!f) return; if (navigator.canShare && navigator.canShare({ files: f })) { try { await navigator.share({ files: f }); } catch (e) { /* cancelled */ } return; } A.outSave(); },
+  outSave: () => { const f = ui.sheet?.files; if (!f) return; f.forEach((x, i) => setTimeout(() => { const a = document.createElement('a'); a.href = URL.createObjectURL(x); a.download = x.name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500); }, i * 400)); toast(T('Картинка сохранена', 'Image saved')); },
   rcSave: () => { if (rcFile) { rcDownload(); toast(T('Картинка сохранена', 'Image saved')); } },
   closeSheet: (el, ev) => { if (el.dataset.self && ev.target !== el) return; closeSheet(); },
   memberStatus: (el) => { const s = getShoot(el.dataset.s); const [id, st] = el.dataset.x.split('|'); const m = s.team.find((x) => x.id === id); m.status = m.status === st ? '' : st; save(); render(); },
@@ -1324,7 +1358,7 @@ const A = {
   saveMember: () => {
     const sh = ui.sheet; const s = getShoot(sh.s); const name = $('#mName').value.trim(); if (!name) { toast(T('Нужно имя', 'Name needed')); return; }
     keepMemberInputs(); const d = { ...sh.data, name };
-    if (sh.isNew) { let p = S.people.find((x) => x.name.toLowerCase() === name.toLowerCase()); if (!p) { p = { id: uid(), name, role: d.role, phone: sh.phone || '', insta: sh.insta || '', food: [], note: '' }; S.people.push(p); } d.pid = p.id; s.team.push(d); }
+    if (sh.isNew) { let p = S.people.find((x) => x.name.toLowerCase() === name.toLowerCase()); if (!p) { p = { id: uid(), name, role: d.role, phone: sh.phone || '', tg: sh.tg || '', insta: sh.insta || '', food: [], note: '' }; S.people.push(p); } d.pid = p.id; s.team.push(d); }
     else { const i = s.team.findIndex((x) => x.id === d.id); s.team[i] = d; }
     ui.sheet = null; save(); render();
   },
@@ -1335,7 +1369,7 @@ const A = {
   togglePFood: (el) => { const d = ui.sheet.data; d.food = d.food || []; const k = el.dataset.x; d.food = d.food.includes(k) ? d.food.filter((x) => x !== k) : d.food.concat(k); keepSheetInputs(['pName', 'pPhone', 'pInsta', 'pNote']); render(); },
   savePerson: () => {
     const sh = ui.sheet; const name = $('#pName').value.trim(); if (!name) { toast(T('Нужно имя', 'Name needed')); return; }
-    const d = { ...sh.data, name, role: $('#pRole').value, phone: $('#pPhone').value, insta: $('#pInsta').value, note: $('#pNote').value };
+    const d = { ...sh.data, name, role: $('#pRole').value, phone: fmtPhone($('#pPhone').value), tg: tgNick($('#pTg').value), insta: $('#pInsta').value, note: $('#pNote').value };
     if (sh.isNew) S.people.push(d); else { const i = S.people.findIndex((x) => x.id === d.id); S.people[i] = d; S.shoots.forEach((s) => s.team.forEach((m) => { if (m.pid === d.id) m.name = d.name; })); }
     ui.sheet = null; save(); render();
   },
@@ -1349,8 +1383,11 @@ const A = {
   activateManual: () => { const v = ($('#actCode')?.value || '').trim(); const m = v.match(/activate\/(.+)$/); doActivate(m ? decodeURIComponent(m[1]) : v); },
 
   pickMood: (el) => { mediaTarget = { s: el.dataset.s, kind: 'mood' }; pickFiles(true); },
-  pickLookImg: (el) => { mediaTarget = { s: el.dataset.s, kind: 'look', look: el.dataset.x }; pickFiles(false); },
-  delLookImg: (el) => { const s = getShoot(el.dataset.s); const l = s.looks.find((x) => x.id === el.dataset.x); if (l && l.img) { mDel(l.img); l.img = ''; save(); render(); } },
+  pickLookImg: (el) => { const [look, key] = el.dataset.x.split('|'); mediaTarget = { s: el.dataset.s, kind: 'look', look, key: key || 'img' }; pickFiles(key === 'pics'); },
+  delLookPic: (el) => { const s = getShoot(el.dataset.s); const [lid, id] = el.dataset.x.split('|'); const l = s.looks.find((x) => x.id === lid); if (!l) return; mDel(id); l.pics = (l.pics || []).filter((x) => x !== id); save(); render(); },
+  lookMore: (el) => { ui.lookOpen = ui.lookOpen || {}; ui.lookOpen[el.dataset.x] = true; render(); },
+  outMode: (el) => makeOut(ui.sheet.s, el.dataset.x),
+  delLookImg: (el) => { const s = getShoot(el.dataset.s); const [id, key = 'img'] = el.dataset.x.split('|'); const l = s.looks.find((x) => x.id === id); if (l && l[key]) { mDel(l[key]); l[key] = ''; save(); render(); } },
   addMoodLink: (el) => { const u = prompt(T('Ссылка на Pinterest, Instagram или папку', 'Link to Pinterest, Instagram or a folder')); if (!u || !u.trim()) return; const s = getShoot(el.dataset.s); s.mood = s.mood || []; s.mood.push({ id: uid(), kind: 'link', url: u.trim() }); save(); render(); },
   delMood: (el) => { const s = getShoot(el.dataset.s); const it = (s.mood || []).find((x) => x.id === el.dataset.x); if (it && it.kind === 'img') mDel(it.id); s.mood = (s.mood || []).filter((x) => x.id !== el.dataset.x); ui.sheet = null; save(); render(); },
   viewImg: (el) => { ui.sheet = { type: 'img', s: el.dataset.s, id: el.dataset.x }; render(); },
@@ -1362,7 +1399,7 @@ const A = {
     if (navigator.canShare && navigator.canShare({ files })) { try { await navigator.share({ files, text }); } catch (e) { /* cancelled */ } }
     else toast(T('Этот браузер не умеет отправлять фото пачкой — открой SET в Safari или Chrome на телефоне', 'This browser cannot share photos — use Safari or Chrome on your phone'));
   },
-  addLook: (el) => { const s = getShoot(el.dataset.s); s.looks.push({ id: uid(), name: '', model: '', clothes: '', makeup: '', hair: '', mua: '', ref: '', done: false }); save(); render(); setTimeout(() => { const all = document.querySelectorAll('[aria-label="' + T('Название образа', 'Look name') + '"]'); all[all.length - 1]?.focus(); }, 30); },
+  addLook: (el) => { const s = getShoot(el.dataset.s); s.looks.push({ id: uid(), name: '', model: '', clothes: '', makeup: '', hair: '', mua: '', ref: '', img: '', mimg: '', done: false }); save(); render(); setTimeout(() => { const all = document.querySelectorAll('[aria-label="' + T('Название образа', 'Look name') + '"]'); all[all.length - 1]?.focus(); }, 30); },
   toggleLook: (el) => { const s = getShoot(el.dataset.s); const l = s.looks.find((x) => x.id === el.dataset.x); l.done = !l.done; save(); render(); },
   editLine: (el) => { const s = getShoot(el.dataset.s); const x = s.budget.lines.find((y) => y.id === el.dataset.x); ui.sheet = { type: 'line', s: s.id, data: JSON.parse(JSON.stringify(x)), isNew: false }; render(); },
   addLine: (el) => { ui.sheet = { type: 'line', s: el.dataset.s, data: { id: uid(), sec: el.dataset.x, label: '', desc: '', qty: '1', unit: el.dataset.x === 'models' ? 'чел' : 'сумма', rate: '', pay: 'money', barter: '', q: false, mid: '' }, isNew: true }; render(); setTimeout(() => $('#lLabel')?.focus(), 50); },
@@ -1435,11 +1472,11 @@ const A = {
   importJson: () => $('#importFile').click(),
   wipe: () => { if (!confirm(T('Точно удалить все съёмки, людей и профиль? Это нельзя отменить.', 'Delete everything? This cannot be undone.'))) return; const keepDev = S.deviceId, keepPro = S.pro; localStorage.removeItem(KEY); S = fresh(); S.deviceId = keepDev; S.pro = keepPro; S.firstRun = todayIso(); S.freeUsed = true; ui.onb = null; location.hash = '#/welcome'; render(); }
 };
-function closeSheet() { ui.sheet = null; if (location.hash.startsWith('#/own')) location.hash = '#/calendar'; else render(); }
+function closeSheet() { if (ui.sheet && ui.sheet.urls) ui.sheet.urls.forEach((u) => URL.revokeObjectURL(u)); ui.sheet = null; if (location.hash.startsWith('#/own')) location.hash = '#/calendar'; else render(); }
 function pickFiles(multi) { const i = document.createElement('input'); i.type = 'file'; i.accept = 'image/*'; if (multi) i.multiple = true; i.style.display = 'none'; document.body.appendChild(i); i.addEventListener('change', () => { onMediaFiles([...i.files]); i.remove(); }); i.click(); }
-function keepMemberInputs() { const d = ui.sheet.data; const g = (i) => $('#' + i); if (g('mName')) d.name = g('mName').value.trim(); if (g('mRole')) d.role = g('mRole').value; if (g('mCall')) d.call = normTime(g('mCall').value); if (g('mRate')) d.rate = g('mRate').value.replace(/[^\d]/g, ''); if (g('mUnit')) d.unit = g('mUnit').value; if (g('mBarter')) d.barter = g('mBarter').value.replace(/[^\d]/g, ''); if (g('mNote')) d.note = g('mNote').value; if (g('mPhone')) ui.sheet.phone = g('mPhone').value; if (g('mInsta')) ui.sheet.insta = g('mInsta').value; }
+function keepMemberInputs() { const d = ui.sheet.data; const g = (i) => $('#' + i); if (g('mName')) d.name = g('mName').value.trim(); if (g('mRole')) d.role = g('mRole').value; if (g('mCall')) d.call = normTime(g('mCall').value); if (g('mRate')) d.rate = g('mRate').value.replace(/[^\d]/g, ''); if (g('mUnit')) d.unit = g('mUnit').value; if (g('mBarter')) d.barter = g('mBarter').value.replace(/[^\d]/g, ''); if (g('mNote')) d.note = g('mNote').value; if (g('mPhone')) ui.sheet.phone = fmtPhone(g('mPhone').value); if (g('mTg')) ui.sheet.tg = tgNick(g('mTg').value); if (g('mInsta')) ui.sheet.insta = g('mInsta').value; }
 function keepLineInputs() { const d = ui.sheet.data; const g = (i) => $('#' + i); if (g('lSec')) d.sec = g('lSec').value; if (g('lLabel')) d.label = g('lLabel').value; if (g('lDesc')) d.desc = g('lDesc').value; if (g('lQty')) d.qty = g('lQty').value.replace(',', '.'); if (g('lUnit')) d.unit = g('lUnit').value; if (g('lRate')) d.rate = g('lRate').value.replace(/[^\d]/g, ''); if (g('lBarter')) d.barter = g('lBarter').value.replace(/[^\d]/g, ''); }
-function keepSheetInputs(ids) { const d = ui.sheet.data; const map = { pName: 'name', pPhone: 'phone', pInsta: 'insta', pNote: 'note' }; ids.forEach((i) => { const e = $('#' + i); if (e) d[map[i]] = e.value; }); }
+function keepSheetInputs(ids) { const d = ui.sheet.data; const map = { pName: 'name', pPhone: 'phone', pTg: 'tg', pInsta: 'insta', pNote: 'note' }; ids.forEach((i) => { const e = $('#' + i); if (e) d[map[i]] = e.value; }); }
 function keepOwnInputs() {
   const d = ui.sheet.data; const g = (i) => $('#' + i);
   if (g('oTitle')) { const v = g('oTitle').value.trim(); const parts = v.split(' · '); d.client = parts.length > 1 ? parts.shift() : ''; d.what = parts.join(' · '); }
@@ -1481,12 +1518,12 @@ function pMood(s) {
   const items = s.mood || [];
   const pics = items.filter((x) => x.kind === 'img');
   const links = items.filter((x) => x.kind === 'link');
-  let h = '<span class="small muted pad4">' + T('Референсы по съёмке: свет, позы, цвет, локация. Фото хранятся в телефоне, команде можно отправить пачкой.', 'References: light, poses, colour, location. Photos stay on this phone; send them to the team in one go.') + '</span>';
+  let h = '<span class="small muted pad4">' + T('Референсы по съёмке: свет, позы, цвет, локация. Команде мудборд уходит одной картинкой А4 — её же можно распечатать.', 'References: light, poses, colour, location. The team gets it as one A4 image you can also print.') + '</span>';
   if (!items.length) h += '<div class="card dashed" style="align-items:center;text-align:center;padding:28px"><h3>' + T('Мудборд пустой', 'Moodboard is empty') + '</h3><span class="small muted">' + T('Для TFP хватит 5–6 картинок, для бренда — сколько нужно, чтобы все поняли одно и то же.', '5–6 images for TFP; for a brand, enough for everyone to see the same picture.') + '</span></div>';
   if (pics.length) h += '<div class="grid2">' + pics.map((x) => '<button data-a="viewImg" data-s="' + s.id + '" data-x="' + x.id + '" style="padding:0;border:none;background:var(--line);border-radius:18px;overflow:hidden;aspect-ratio:3/4">' + imgTag(x.id, 'width:100%;height:100%;object-fit:cover;display:block') + '</button>').join('') + '</div>';
   if (links.length) h += '<div class="card tight">' + links.map((x) => '<div class="li"><a class="grow" href="' + esc(/^https?:/i.test(x.url) ? x.url : 'https://' + x.url) + '" target="_blank" rel="noopener" style="word-break:break-all">' + esc(x.url) + '</a><button class="textbtn" data-a="delMood" data-s="' + s.id + '" data-x="' + x.id + '" aria-label="' + T('Удалить', 'Delete') + '">' + I.x.replace('<svg', '<svg width="16" height="16"') + '</button></div>').join('') + '</div>';
   h += '<div class="grid2"><button class="btn soft" data-a="pickMood" data-s="' + s.id + '">' + T('+ Фото', '+ Photos') + '</button><button class="btn soft" data-a="addMoodLink" data-s="' + s.id + '">' + T('+ Ссылка', '+ Link') + '</button></div>';
-  if (pics.length) h += '<button class="btn ghost" data-a="shareMood" data-s="' + s.id + '">' + T('Отправить мудборд команде', 'Send moodboard to the team') + '</button>';
+  if (pics.length) h += '<button class="btn" data-a="moodSheet" data-s="' + s.id + '">' + T('Мудборд одной картинкой', 'Moodboard as one image') + '</button>';
   return h;
 }
 let mediaTarget = null;
@@ -1499,10 +1536,137 @@ async function onMediaFiles(files) {
     try {
       const blob = await compress(f); const id = 'img_' + uid(); await mPut(id, blob);
       if (t.kind === 'mood') { s.mood = s.mood || []; s.mood.push({ id, kind: 'img' }); }
-      else if (t.kind === 'look') { const l = s.looks.find((x) => x.id === t.look); if (l) { if (l.img) mDel(l.img); l.img = id; } }
+      else if (t.kind === 'look') { const l = s.looks.find((x) => x.id === t.look); const k = t.key || 'img'; if (l) { if (k === 'pics') { l.pics = l.pics || []; if (l.pics.length < 3) l.pics.push(id); else mDel(id); } else { if (l[k]) mDel(l[k]); l[k] = id; } } }
     } catch (e) { toast(T('Не получилось добавить фото', 'Could not add a photo')); }
   }
   save(); render(); toast(T('Добавлено', 'Added'));
+}
+
+
+/* --- A4 sheets as images: look sheet and moodboard --- */
+const A4 = { W: 1240, H: 1754, M: 70 };
+async function sheetFonts() { if (!document.fonts) return; await Promise.all(["600 40px 'Inter Tight'", "400 24px Inter", "600 24px Inter", "30px Neucha", "500 20px 'IBM Plex Mono'"].map((f) => document.fonts.load(f).catch(() => {}))); }
+async function loadImg(id) { if (!id) return null; const b = await mGet(id); if (!b) return null; return new Promise((r) => { const im = new Image(); im.onload = () => r(im); im.onerror = () => r(null); im.src = URL.createObjectURL(b); }); }
+function rrect(c, x, y, w, h, r) { c.beginPath(); c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r); c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath(); }
+function coverImg(c, im, x, y, w, h, r) { c.save(); rrect(c, x, y, w, h, r); c.clip(); c.fillStyle = '#EFEDEA'; c.fillRect(x, y, w, h); if (im) { const k = Math.max(w / im.width, h / im.height); const iw = im.width * k, ih = im.height * k; c.drawImage(im, x + (w - iw) / 2, y + (h - ih) / 2, iw, ih); } c.restore(); }
+function wrapLines(c, text, maxW, maxLines) { const words = String(text || '').split(/\s+/).filter(Boolean); const out = []; let line = ''; for (const w of words) { const t = line ? line + ' ' + w : w; if (c.measureText(t).width > maxW && line) { out.push(line); line = w; } else line = t; } if (line) out.push(line); if (out.length > maxLines) { const keep = out.slice(0, maxLines); let last = keep[maxLines - 1]; while (c.measureText(last + '…').width > maxW && last.length > 1) last = last.slice(0, -1); keep[maxLines - 1] = last + '…'; return keep; } return out; }
+function sheetHead(c, s, label, page, pages) {
+  const { W, M } = A4; c.fillStyle = '#fff'; c.fillRect(0, 0, W, A4.H);
+  c.fillStyle = 'rgb(244,161,195)'; c.fillRect(0, 0, W, 14);
+  c.fillStyle = '#1A1A22'; c.textBaseline = 'alphabetic';
+  c.font = "30px Neucha, 'Inter Tight', sans-serif"; c.fillText('set', M, M + 20);
+  c.font = "500 20px 'IBM Plex Mono', monospace"; c.fillStyle = '#6E6B75'; const lb = label + (pages > 1 ? '  ' + page + '/' + pages : ''); c.fillText(lb, M + 70, M + 18);
+  c.fillStyle = '#1A1A22'; let fs = 58; c.font = "600 " + fs + "px 'Inter Tight', Inter, sans-serif"; const title = titleOf(s); while (c.measureText(title).width > W - 2 * M - 360 && fs > 30) { fs -= 4; c.font = "600 " + fs + "px 'Inter Tight', Inter, sans-serif"; }
+  c.fillText(title, M, M + 96);
+  c.textAlign = 'right'; c.font = "600 28px Inter, sans-serif"; if (s.date) c.fillText(fmtDate(s.date, { wd: true, year: true }), W - M, M + 50);
+  c.font = "400 24px Inter, sans-serif"; c.fillStyle = '#4A4852'; const tm = [s.call ? T('сбор ', 'call ') + s.call : '', s.end ? T('конец ', 'wrap ') + s.end : ''].filter(Boolean).join(' · '); if (tm) c.fillText(tm, W - M, M + 90); c.textAlign = 'left';
+  let y = M + 132; const pl = [s.place, s.address].filter(Boolean).join(', ');
+  if (pl) { c.font = "400 24px Inter, sans-serif"; c.fillStyle = '#4A4852'; wrapLines(c, pl, W - 2 * M, 2).forEach((ln) => { c.fillText(ln, M, y); y += 32; }); }
+  c.fillStyle = '#E3E0E6'; c.fillRect(M, y + 4, W - 2 * M, 2); return y + 34;
+}
+function sheetFoot(c) { const { W, H, M } = A4; c.font = "400 18px Inter, sans-serif"; c.fillStyle = '#6E6B75'; c.fillText(T('Собрано в SET · смета и ставки на этот лист не попадают', 'Made with SET · no money on this sheet'), M, H - M + 20); }
+async function drawLookPages(s) {
+  await sheetFonts(); const { W, H, M } = A4; const per = 4; const looks = s.looks; const pages = Math.max(1, Math.ceil(looks.length / per)); const files = [];
+  for (let p = 0; p < pages; p++) {
+    const cv = document.createElement('canvas'); cv.width = W; cv.height = H; const c = cv.getContext('2d');
+    const top = sheetHead(c, s, T('ЛИСТ ОБРАЗОВ', 'LOOK SHEET'), p + 1, pages);
+    const chunk = looks.slice(p * per, p * per + per); const cols = chunk.length === 1 ? 1 : 2; const rows = Math.ceil(chunk.length / cols) || 1;
+    const gap = 30, cw = (W - 2 * M - gap * (cols - 1)) / cols, ch = (H - M - 40 - top - gap * (rows - 1)) / rows;
+    for (let i = 0; i < chunk.length; i++) {
+      const l = chunk[i], n = p * per + i + 1; const x = M + (i % cols) * (cw + gap), y = top + Math.floor(i / cols) * (ch + gap);
+      c.fillStyle = '#F7F6F4'; rrect(c, x, y, cw, ch, 22); c.fill();
+      const pad = 18; const ims = (await Promise.all([loadImg(l.mimg), loadImg(l.img)])).filter(Boolean);
+      const textH = 300; const ph = Math.max(0, ch - textH - pad * 2); const pw = cw - pad * 2;
+      if (ph > 80) { if (ims.length) { const w1 = ims.length === 2 ? (pw - 12) / 2 : pw; ims.forEach((im, k) => coverImg(c, im, x + pad + k * (w1 + 12), y + pad, w1, ph, 14)); } else { const w1 = (pw - 12) / 2; [T('фото модели', 'model photo'), T('образ', 'look')].forEach((lb, k) => { const bx = x + pad + k * (w1 + 12); c.save(); c.setLineDash([10, 8]); c.strokeStyle = '#C9C5CE'; c.lineWidth = 2; rrect(c, bx, y + pad, w1, ph, 14); c.stroke(); c.restore(); c.font = "400 20px Inter, sans-serif"; c.fillStyle = '#9A96A1'; c.textAlign = 'center'; c.fillText(lb, bx + w1 / 2, y + pad + ph / 2); c.textAlign = 'left'; }); } }
+      let ty = y + pad + (ph > 80 ? ph + 34 : 34); const tx = x + pad, tw = cw - pad * 2;
+      c.font = "500 20px 'IBM Plex Mono', monospace"; c.fillStyle = '#6E6B75'; c.fillText(T('ОБРАЗ ', 'LOOK ') + pad2(n) + (l.done ? T(' · снят', ' · shot') : ''), tx, ty); ty += 40;
+      c.fillStyle = '#1A1A22'; c.font = "600 34px 'Inter Tight', Inter, sans-serif"; const head = l.model || l.name || '—'; wrapLines(c, head, tw, 1).forEach((ln) => { c.fillText(ln, tx, ty); }); ty += 40;
+      if (l.name && l.model) { c.font = "400 24px Inter, sans-serif"; c.fillStyle = '#4A4852'; wrapLines(c, '«' + l.name + '»', tw, 1).forEach((ln) => c.fillText(ln, tx, ty)); ty += 34; }
+      const rowsT = [[T('Одежда', 'Outfit'), l.clothes], [T('Мейк', 'Make-up'), l.makeup], [T('Волосы', 'Hair'), l.hair], [T('Визажист', 'MUA'), l.mua]].filter((r) => r[1]);
+      for (const [k, v] of rowsT) { if (ty > y + ch - 20) break; c.font = "600 22px Inter, sans-serif"; c.fillStyle = '#1A1A22'; c.fillText(k + ':', tx, ty); const kw = c.measureText(k + ': ').width; c.font = "400 22px Inter, sans-serif"; c.fillStyle = '#1A1A22'; const ls = wrapLines(c, v, tw - kw, 2); ls.forEach((ln, j) => c.fillText(ln, tx + kw, ty + j * 28)); ty += ls.length * 28 + 8; }
+      c.strokeStyle = '#1A1A22'; c.lineWidth = 2; c.strokeRect(x + cw - pad - 26, y + ch - pad - 26, 22, 22); c.font = "400 20px Inter, sans-serif"; c.textAlign = 'right'; c.fillText(T('снят', 'shot'), x + cw - pad - 36, y + ch - pad - 8); c.textAlign = 'left';
+    }
+    sheetFoot(c);
+    const blob = await new Promise((r) => cv.toBlob(r, 'image/png'));
+    files.push(new File([blob], fileBase(s, T('obrazy', 'looks')) + (pages > 1 ? '-' + (p + 1) : '') + '.png', { type: 'image/png' }));
+  }
+  return files;
+}
+async function drawLookCards(s) {
+  await sheetFonts(); const { W, H } = A4; const M = 60; const files = []; const total = s.looks.length;
+  const ink = '#1A1A22', mid = '#4A4852', soft = '#6E6B75', red = '#B4271B';
+  for (let i = 0; i < total; i++) {
+    const l = s.looks[i]; const cv = document.createElement('canvas'); cv.width = W; cv.height = H; const c = cv.getContext('2d');
+    c.fillStyle = '#fff'; c.fillRect(0, 0, W, H); c.fillStyle = 'rgb(244,161,195)'; c.fillRect(0, 0, W, 12);
+    c.textBaseline = 'alphabetic';
+    c.fillStyle = soft; c.font = "500 22px 'IBM Plex Mono', monospace"; c.fillText(T('ОБРАЗ', 'LOOK'), M, M + 30);
+    c.fillStyle = ink; c.font = "700 150px 'Inter Tight', Inter, sans-serif"; const num = pad2(i + 1); c.fillText(num, M - 6, M + 170); const nw = c.measureText(num).width;
+    const nx = M + nw + 34, nmax = W - M - nx - (l.time ? 190 : 0);
+    let fs = 64; c.font = "700 " + fs + "px 'Inter Tight', Inter, sans-serif"; const who = (l.model || T('Модель', 'Model')).toUpperCase(); while (c.measureText(who).width > nmax && fs > 34) { fs -= 4; c.font = "700 " + fs + "px 'Inter Tight', Inter, sans-serif"; }
+    c.fillText(who, nx, M + 104);
+    c.font = "400 26px Inter, sans-serif"; c.fillStyle = mid; const sub = [l.name ? '«' + l.name + '»' : '', l.params].filter(Boolean).join(' · '); if (sub) wrapLines(c, sub, nmax, 2).forEach((ln, j) => c.fillText(ln, nx, M + 146 + j * 32));
+    if (l.time) { c.textAlign = 'right'; c.fillStyle = ink; c.font = "700 64px 'Inter Tight', Inter, sans-serif"; c.fillText(l.time, W - M, M + 104); c.textAlign = 'left'; }
+    c.textAlign = 'right'; c.font = "400 20px Inter, sans-serif"; c.fillStyle = soft; c.fillText([titleOf(s), s.date ? fmtDate(s.date, { year: true }) : ''].filter(Boolean).join(' · '), W - M, M + 26); c.textAlign = 'left';
+    // photos
+    const py = M + 220, ph = 820, gap = 16; const [mim, lim, ...extras] = await Promise.all([loadImg(l.mimg), loadImg(l.img), ...(l.pics || []).map(loadImg)]);
+    const leftW = 430, rightW = W - 2 * M - leftW - gap;
+    const slot = (im, x, y, w, h, label) => { if (im) coverImg(c, im, x, y, w, h, 10); else { c.save(); c.setLineDash([10, 8]); c.strokeStyle = '#C9C5CE'; c.lineWidth = 2; rrect(c, x, y, w, h, 10); c.stroke(); c.restore(); c.font = "400 20px Inter, sans-serif"; c.fillStyle = '#9A96A1'; c.textAlign = 'center'; c.fillText(label, x + w / 2, y + h / 2); c.textAlign = 'left'; } };
+    const ex = extras.filter(Boolean);
+    const mh = ex.length ? 520 : ph; slot(mim, M, py, leftW, mh, T('фото модели', 'model photo'));
+    if (ex.length) { const ew = ex.length === 1 ? leftW : (leftW - gap) / 2; const eh = ph - mh - gap; ex.slice(0, 2).forEach((im, k) => slot(im, M + k * (ew + gap), py + mh + gap, ew, eh, '')); }
+    slot(lim, M + leftW + gap, py, rightW, ph, T('фото образа', 'look photo'));
+    if (ex[2]) coverImg(c, ex[2], M + leftW + gap + rightW - 220 - 14, py + ph - 220 - 14, 220, 220, 10);
+    // description
+    let y = py + ph + 56; const colW = (W - 2 * M - 40) / 2; const bottom = H - M - 70;
+    const block = (x, title, rows, yy) => { c.fillStyle = soft; c.font = "500 20px 'IBM Plex Mono', monospace"; c.fillText(title, x, yy); yy += 38; rows.filter((r) => r[1]).forEach(([k, v]) => { if (yy > bottom) return; c.font = "600 26px Inter, sans-serif"; c.fillStyle = ink; c.fillText(k, x, yy); const kw = c.measureText(k + '  ').width; c.font = "400 26px Inter, sans-serif"; const ls = wrapLines(c, v, colW - kw, 3); ls.forEach((ln, j) => c.fillText(ln, x + kw, yy + j * 34)); yy += ls.length * 34 + 10; }); return yy; };
+    const look = [[T('Одежда', 'Outfit'), l.clothes], [T('Обувь', 'Shoes'), l.shoes], [T('Аксессуары', 'Accessories'), l.acc]];
+    const beauty = [[T('Мейк', 'Make-up'), l.makeup], [T('Визажист', 'MUA'), l.mua], [T('Волосы', 'Hair'), l.hair], [T('Волосы делает', 'Hair by'), l.hairby]];
+    const y1 = look.some((r) => r[1]) ? block(M, T('ОБРАЗ', 'LOOK'), look, y) : y; const y2 = beauty.some((r) => r[1]) ? block(M + colW + 40, T('МЕЙК И ВОЛОСЫ', 'MAKE-UP & HAIR'), beauty, y) : y;
+    y = Math.max(y1, y2) + 14;
+    const shots = String(l.shots || '').split('\n').map((x) => x.trim()).filter(Boolean);
+    if (shots.length && y < bottom - 40) { c.fillStyle = soft; c.font = "500 20px 'IBM Plex Mono', monospace"; c.fillText(T('КАДРЫ', 'SHOTS'), M, y); y += 38; c.font = "400 26px Inter, sans-serif"; c.fillStyle = ink; const cols2 = shots.length > 3 ? 2 : 1; shots.slice(0, 8).forEach((t, k) => { const cx = M + (k % cols2) * (colW + 40), cy = y + Math.floor(k / cols2) * 40; if (cy > bottom) return; c.strokeStyle = ink; c.lineWidth = 2; c.strokeRect(cx, cy - 20, 22, 22); wrapLines(c, t, colW - 40, 1).forEach((ln) => c.fillText(ln, cx + 36, cy)); }); y += Math.ceil(Math.min(shots.length, 8) / cols2) * 40 + 10; }
+    if (l.note && y < bottom) { c.fillStyle = red; c.font = "600 26px Inter, sans-serif"; wrapLines(c, '! ' + l.note, W - 2 * M, 2).forEach((ln, j) => c.fillText(ln, M, y + 10 + j * 34)); }
+    // footer
+    c.fillStyle = '#E3E0E6'; c.fillRect(M, H - M - 40, W - 2 * M, 2);
+    c.fillStyle = ink; c.font = "28px Neucha, 'Inter Tight', sans-serif"; c.fillText('set', M, H - M + 2);
+    c.font = "400 18px Inter, sans-serif"; c.fillStyle = soft; c.fillText(pad2(i + 1) + ' / ' + pad2(total), M + 60, H - M);
+    c.strokeStyle = ink; c.lineWidth = 2; c.strokeRect(W - M - 26, H - M - 22, 24, 24); c.textAlign = 'right'; c.fillStyle = ink; c.font = "400 22px Inter, sans-serif"; c.fillText(T('снят', 'shot'), W - M - 38, H - M); c.textAlign = 'left';
+    const blob = await new Promise((r) => cv.toBlob(r, 'image/png'));
+    files.push(new File([blob], fileBase(s, T('obraz', 'look')) + '-' + pad2(i + 1) + '.png', { type: 'image/png' }));
+  }
+  return files;
+}
+async function drawMoodPages(s) {
+  await sheetFonts(); const { W, H } = A4; const M = 60; const pics = (s.mood || []).filter((x) => x.kind === 'img'); const links = (s.mood || []).filter((x) => x.kind === 'link').map((x) => x.url);
+  const per = 12; const pages = Math.max(1, Math.ceil(pics.length / per)); const files = [];
+  const grid = (n) => n <= 1 ? [1, 1] : n === 2 ? [2, 1] : n === 3 ? [3, 1] : n === 4 ? [2, 2] : n <= 6 ? [3, 2] : n <= 9 ? [3, 3] : [3, 4];
+  for (let p = 0; p < pages; p++) {
+    const cv = document.createElement('canvas'); cv.width = W; cv.height = H; const c = cv.getContext('2d');
+    c.fillStyle = '#fff'; c.fillRect(0, 0, W, H);
+    const headH = 150; c.textBaseline = 'alphabetic';
+    c.fillStyle = '#1A1A22'; c.font = "28px Neucha, 'Inter Tight', sans-serif"; c.fillText('set', M, 62);
+    c.fillStyle = '#6E6B75'; c.font = "500 20px 'IBM Plex Mono', monospace"; c.fillText(T('МУДБОРД', 'MOODBOARD') + (pages > 1 ? '  ' + (p + 1) + '/' + pages : ''), M + 64, 60);
+    c.fillStyle = '#1A1A22'; let fs = 46; c.font = "600 " + fs + "px 'Inter Tight', Inter, sans-serif"; const title = titleOf(s); while (c.measureText(title).width > W - 2 * M - 300 && fs > 28) { fs -= 4; c.font = "600 " + fs + "px 'Inter Tight', Inter, sans-serif"; } c.fillText(title, M, 122);
+    c.textAlign = 'right'; c.font = "400 22px Inter, sans-serif"; c.fillStyle = '#4A4852'; c.fillText([s.date ? fmtDate(s.date, { year: true }) : '', s.place].filter(Boolean).join(' · '), W - M, 122); c.textAlign = 'left';
+    const chunk = pics.slice(p * per, p * per + per); const [, rows] = grid(chunk.length);
+    const linkH = p === pages - 1 && links.length ? Math.min(links.length, 3) * 26 + 40 : 0;
+    const gy = headH, gh = H - headH - linkH, ch = gh / rows;
+    const ims = await Promise.all(chunk.map((x) => loadImg(x.id)));
+    const perRow = []; let left = ims.length; for (let r = 0; r < rows; r++) { const k = Math.ceil(left / (rows - r)); perRow.push(k); left -= k; }
+    let idx = 0; perRow.forEach((k, r) => { const w = W / k; for (let j = 0; j < k; j++, idx++) { const im = ims[idx]; const x = j * w, y = gy + r * ch; c.save(); c.beginPath(); c.rect(Math.floor(x), Math.floor(y), Math.ceil(w) + 1, Math.ceil(ch) + 1); c.clip(); c.fillStyle = '#EFEDEA'; c.fillRect(x, y, w + 1, ch + 1); if (im) { const sc = Math.max(w / im.width, ch / im.height); c.drawImage(im, x + (w - im.width * sc) / 2, y + (ch - im.height * sc) / 2, im.width * sc, im.height * sc); } c.restore(); } });
+    if (linkH) { let ly = H - linkH + 32; c.font = "400 18px Inter, sans-serif"; c.fillStyle = '#3B4FB0'; links.slice(0, 3).forEach((u) => { wrapLines(c, u, W - 2 * M, 1).forEach((ln) => c.fillText(ln, M, ly)); ly += 26; }); }
+    const blob = await new Promise((r) => cv.toBlob(r, 'image/png'));
+    files.push(new File([blob], fileBase(s, 'moodboard') + (pages > 1 ? '-' + (p + 1) : '') + '.png', { type: 'image/png' }));
+  }
+  return files;
+}
+const pad2 = (n) => String(n).padStart(2, '0');
+const fileBase = (s, k) => 'set-' + k + '-' + (titleOf(s).replace(/[^\wа-яё]+/gi, '-').replace(/^-|-$/g, '').slice(0, 40) || 'sheet');
+async function makeOut(sid, kind) {
+  const s = getShoot(sid); if (!s) return;
+  ui.sheet = { type: 'out', s: sid, kind, title: kind === 'mood' ? T('Мудборд', 'Moodboard') : T('Карточки образов', 'Look cards') }; render();
+  try { const files = kind === 'looks' ? await drawLookCards(s) : kind === 'looks4' ? await drawLookPages(s) : await drawMoodPages(s); if (!ui.sheet || ui.sheet.type !== 'out' || ui.sheet.s !== sid) return; ui.sheet.files = files; ui.sheet.urls = files.map((f) => URL.createObjectURL(f)); render(); }
+  catch (e) { toast(T('Не получилось собрать лист', 'Could not build the sheet')); }
 }
 
 /* ---------- demo ---------- */
@@ -1596,6 +1760,8 @@ document.addEventListener('input', (ev) => {
 });
 document.addEventListener('change', (ev) => {
   const el = ev.target;
+  if (el.type === 'tel' && el.value) el.value = fmtPhone(el.value);
+  if (el.dataset.tg && el.value) el.value = tgNick(el.value);
   if (el.dataset.time) el.value = normTime(el.value);
   if (el.dataset.b) { setPath(el.dataset.b, el.value); if (el.dataset.r && !(el.dataset.time && document.activeElement === el)) { clearTimeout(window._rt); window._rt = setTimeout(render, 250); } }
   if (el.id === 'oDate' && ui.sheet) { keepOwnInputs(); render(); }
