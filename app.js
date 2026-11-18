@@ -1,6 +1,6 @@
 'use strict';
 /* SET — beta. All data lives on this device (localStorage). */
-const VERSION = '0.9.10 beta';
+const VERSION = '0.10.0 beta';
 const APP_URL = (location.host + location.pathname).replace(/index\.html$/, '').replace(/\/$/, '');
 const KEY = 'set.v1';
 
@@ -625,7 +625,7 @@ function vToday() {
 /* --- projects list --- */
 function vProjects() {
   const t = todayIso();
-  const list = S.shoots.filter((s) => s.src === 'set');
+  const list = S.shoots.filter((s) => s.src === 'set' || s.src === 'guest');
   const active = list.filter((s) => !isPast(s)).sort(sortByDate);
   const past = list.filter((s) => isPast(s)).sort((a, b) => sortByDate(b, a));
   const shown = ui.filter === 'past' ? past : active;
@@ -634,8 +634,9 @@ function vProjects() {
   if (!shown.length) h += '<div class="empty">' + (ui.filter === 'past' ? T('Здесь будут прошедшие съёмки', 'Past shoots will appear here') : T('Пока пусто. Нажми «+» внизу.', 'Nothing yet. Tap “+” below.')) + '</div>';
   shown.forEach((s) => {
     const dd = parseIso(s.date);
-    h += '<a class="card glow-' + (KINDS[s.kind]?.glow || 'pink') + '" href="#/p/' + s.id + '" style="text-decoration:none;color:inherit;flex-direction:row;gap:14px;align-items:center"><span class="col" style="gap:0;min-width:54px">' + (dd ? '<span class="big-date" style="font-size:40px">' + dd.getDate() + '</span><span class="tiny">' + MON_S[L()][dd.getMonth()] + '</span>' : '<span class="tiny muted">' + T('без даты', 'no date') + '</span>') + '</span><span class="col grow" style="gap:4px"><b style="font-size:16px;font-weight:600">' + esc(titleOf(s)) + '</b><span class="tiny">' + esc(L() === 'en' ? KINDS[s.kind]?.en : KINDS[s.kind]?.ru) + ' · ' + s.team.length + ' ' + T(plural(s.team.length, 'человек', 'человека', 'человек'), 'people') + (s.date && s.date >= t ? ' · ' + relDay(s.date) : '') + '</span></span>' + (s.status === 'done' ? '<span class="badge ok">' + T('сдано', 'done') + '</span>' : '') + '</a>';
+    h += '<a class="card glow-' + (KINDS[s.kind]?.glow || 'pink') + '" href="#/p/' + s.id + '" style="text-decoration:none;color:inherit;flex-direction:row;gap:14px;align-items:center"><span class="col" style="gap:0;min-width:54px">' + (dd ? '<span class="big-date" style="font-size:40px">' + dd.getDate() + '</span><span class="tiny">' + MON_S[L()][dd.getMonth()] + '</span>' : '<span class="tiny muted">' + T('без даты', 'no date') + '</span>') + '</span><span class="col grow" style="gap:4px"><b style="font-size:16px;font-weight:600">' + esc(titleOf(s)) + '</b><span class="tiny">' + (s.src === 'guest' ? T('позвали', 'invited') + (s.guest?.from?.name ? ' · ' + esc(s.guest.from.name) : '') : esc(L() === 'en' ? KINDS[s.kind]?.en : KINDS[s.kind]?.ru)) + ' · ' + s.team.length + ' ' + T(plural(s.team.length, 'человек', 'человека', 'человек'), 'people') + (s.date && s.date >= t ? ' · ' + relDay(s.date) : '') + '</span></span>' + (s.status === 'done' ? '<span class="badge ok">' + T('сдано', 'done') + '</span>' : '') + '</a>';
   });
+  h += '<div class="card dashed" style="gap:10px"><b>' + T('Позвали в проект?', 'Invited to a project?') + '</b><span class="small muted">' + T('Ссылка открылась не в приложении? Вставь её сюда — проект сохранится у тебя.', 'Link opened outside the app? Paste it here and the project is saved.') + '</span><input class="inp" id="joinPaste" placeholder="' + T('ссылка от продюсера', 'link from the producer') + '" autocomplete="off"><button class="btn soft" data-a="pasteJoin">' + T('Открыть проект', 'Open project') + '</button></div>';
   h += '</div>' + nav('projects');
   return h;
 }
@@ -668,6 +669,7 @@ function vProject(id, tab) {
   const s = getShoot(id);
   if (!s) return vNotFound();
   if (s.src === 'own') { location.hash = '#/me'; return ''; }
+  if (s.src === 'guest') return vGuest(s);
   tab = tab || 'main';
   const tabs = [['main', T('Главное', 'Overview')]];
   if (s.modules.mood !== false) tabs.push(['mood', T('Мудборд', 'Moodboard') + ((s.mood || []).length ? ' · ' + s.mood.length : '')]);
@@ -748,6 +750,7 @@ function pTeam(s) {
   if (handles.length) h += '<button class="btn ghost" data-a="copyText" data-x="' + esc(handles.map((x) => (x.startsWith('@') ? x : '@' + x)).join(' ')) + '">' + T('Скопировать отметки для Instagram', 'Copy Instagram tags') + '</button>';
   const food = teamFood(s);
   if (food) h += '<div class="hint"><span class="dot"></span><span>' + T('Еда: ', 'Food: ') + esc(food) + '</span></div>';
+  h += '<span class="tiny muted pad4">' + T('В каждом приглашении — ссылка на проект: человек сохранит его в своём SET. Поменяла тайминг или адрес — нажми «Отправить команде», и проект обновится у всех, кто откроет новую ссылку.', 'Every invite has a project link the person saves in their SET. Changed something? Tap “Send to the team” and it updates for everyone who opens the new link.') + '</span>';
   h += '<span class="lock pad4">' + I.lock + T('Ставки видишь только ты. Каждый получает только своё.', 'Only you see rates.') + '</span>';
   return h;
 }
@@ -893,7 +896,7 @@ function vCalendar() {
     const iso = c.y + '-' + pad(c.m + 1) + '-' + pad(d);
     const list = byDay[iso] || [];
     let cls = iso < t ? 'past' : '';
-    if (list.some((s) => s.src === 'set')) cls = 'has'; else if (list.length) cls = 'own';
+    if (list.some((s) => s.src !== 'own')) cls = 'has'; else if (list.length) cls = 'own';
     if (iso === t && !list.length) cls = 'today';
     if (sel === iso) cls += ' sel';
     h += '<button class="' + cls + '" data-a="calPick" data-x="' + iso + '" aria-label="' + esc(fmtDate(iso)) + (list.length ? ', ' + list.length + ' ' + T('съёмки', 'shoots') : '') + '">' + d + '</button>';
@@ -926,6 +929,82 @@ function vPeople() {
   return h;
 }
 
+/* --- projects shared by link: the team keeps the project in their own SET --- */
+const B64S = {
+  enc: (u8) => { let x = ''; for (let i = 0; i < u8.length; i += 0x8000) x += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(x).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); },
+  dec: (str) => { str = str.replace(/-/g, '+').replace(/_/g, '/'); while (str.length % 4) str += '='; const b = atob(str); const u = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u; },
+};
+async function packJson(o) {
+  const bytes = new TextEncoder().encode(JSON.stringify(o));
+  if (window.CompressionStream) { try { const st = new Blob([bytes]).stream().pipeThrough(new CompressionStream('deflate-raw')); return 'z' + B64S.enc(new Uint8Array(await new Response(st).arrayBuffer())); } catch (e) { /* fall back to plain */ } }
+  return 'j' + B64S.enc(bytes);
+}
+async function unpackJson(str) {
+  let u = B64S.dec(str.slice(1));
+  if (str[0] === 'z') { const st = new Blob([u]).stream().pipeThrough(new DecompressionStream('deflate-raw')); u = new Uint8Array(await new Response(st).arrayBuffer()); }
+  return JSON.parse(new TextDecoder().decode(u));
+}
+const appBase = () => location.origin + location.pathname.replace(/index\.html$/, '');
+const pickK = (o, ks) => { const r = {}; ks.forEach((k) => { if (o && o[k] != null && o[k] !== '') r[k] = o[k]; }); return r; };
+// what the team gets: no budget, no checklist, no notes, no one else's money
+function shareSnapshot(s, memberId) {
+  if (!s.shareId) s.shareId = uid() + uid();
+  return { v: 1, sid: s.shareId, u: Date.now(), from: pickK(S.profile, ['name', 'phone']), me: memberId || '',
+    s: { ...pickK(s, ['kind', 'client', 'what', 'date', 'call', 'end', 'place', 'address']),
+      modules: { team: !!s.modules.team, timing: !!s.modules.timing, looks: !!s.modules.looks, mood: s.modules.mood !== false },
+      timing: (s.timing || []).map((x) => pickK(x, ['id', 't', 't2', 'w', 'who', 'det'])),
+      team: (s.team || []).map((m) => ({ ...pickK(m, ['id', 'name', 'role', 'call', 'status']), ...(m.id === memberId ? pickK(m, ['rate', 'unit', 'pay', 'barter', 'note']) : {}) })),
+      looks: (s.looks || []).map((l) => pickK(l, ['id', 'name', 'model', 'clothes', 'makeup', 'hair', 'mua', 'ref', 'done'])),
+      mood: (s.mood || []).filter((x) => x.kind === 'link' && x.url).map((x) => ({ kind: 'link', url: x.url })) } };
+}
+async function shareLink(s, memberId) { const snap = shareSnapshot(s, memberId); save(); return appBase() + '#/join/' + await packJson(snap); }
+function importShared(d) {
+  const ex = S.shoots.find((x) => x.src === 'guest' && x.guest && x.guest.sid === d.sid);
+  if (ex && ex.guest.u > d.u) { toast(T('У тебя уже более свежая версия этого проекта', 'You already have a newer version of this project')); return ex.id; }
+  const me = d.me || (ex && ex.guest.me) || '';
+  const mem = (d.s.team || []).find((m) => m.id === me);
+  const fee = mem && ['money', 'mix'].includes(mem.pay || 'money') && num(mem.rate) ? String(num(mem.rate)) : '';
+  const my = ex ? ex.my : { role: (mem && mem.role) || S.profile.roles[0] || '', fee, pay: (mem && mem.pay) || 'money', barter: (mem && mem.barter) || '', shifts: 1, paid: false, check: false, note: '' };
+  if (ex && mem && !my.fee && fee) { my.fee = fee; my.pay = mem.pay || 'money'; }
+  const g = { id: ex ? ex.id : 'g' + uid(), src: 'guest', kind: d.s.kind || 'custom', client: '', what: '', date: '', call: '', end: '', place: '', address: '', notes: '',
+    timing: [], team: [], looks: [], checklist: [], mood: [], budget: { lines: [], note: '', reserve: '10', v2: true }, rights: '', deliver: '', retouch: '',
+    ...d.s, modules: { ...(d.s.modules || {}), budget: false, print: false },
+    my, onset: ex ? ex.onset : { idx: 0 }, status: 'plan', created: ex ? ex.created : Date.now(),
+    guest: { sid: d.sid, u: d.u, me, from: d.from || {} } };
+  if (mem && my.fee === '' && fee) my.fee = fee;
+  (g.team || []).forEach((m) => { if (!m.pay) m.pay = 'money'; if (!m.unit) m.unit = 'смена'; });
+  if (ex) Object.assign(ex, g); else S.shoots.push(g);
+  save();
+  toast(ex ? T('Проект обновлён', 'Project updated') : T('Проект сохранён в SET', 'Project saved to SET'));
+  return g.id;
+}
+async function joinFrom(code) {
+  let d = null;
+  try { d = await unpackJson(code); } catch (e) { d = null; }
+  if (!d || d.v !== 1 || !d.s || !d.sid) { toast(T('Ссылка повреждена — попроси прислать её заново', 'This link is broken — ask for a new one')); location.replace('#/today'); return; }
+  if (!S.profile.onboarded) { S.pendingJoin = code; save(); location.replace('#/welcome'); toast(T('Пара слов о себе — и откроем проект', 'Tell us a bit about you — then we open the project')); return; }
+  const id = importShared(d);
+  location.replace('#/p/' + id);
+}
+const fmtStamp = (ms) => { if (!ms) return ''; const d = new Date(ms); return d.getDate() + ' ' + MON_S[L()][d.getMonth()] + ', ' + pad(d.getHours()) + ':' + pad(d.getMinutes()); };
+function vGuest(s) {
+  const g = s.guest || {}; const me = (s.team || []).find((m) => m.id === g.me); const from = g.from || {};
+  let h = '<div class="screen has-cta"><div class="top">' + backBtn('#/projects') + '<span class="kicker">' + T('Тебя позвали', 'You’re on the team') + '</span><span style="width:44px"></span></div>';
+  h += '<div class="col pad4" style="gap:6px"><span class="kicker">' + (s.date ? fmtDate(s.date, { wd: true }) + ' · ' + relDay(s.date) : T('дата скоро', 'date tbc')) + '</span><h1 style="font-size:40px">' + esc(titleOf(s)) + '</h1><span class="small muted">' + (from.name ? T('от ', 'from ') + esc(from.name) + ' · ' : '') + T('версия от ', 'version of ') + esc(fmtStamp(g.u)) + '</span></div>';
+  if (me) h += '<div class="card glow-pink" style="gap:8px"><span class="kicker">' + T('твоё', 'yours') + '</span><h2>' + esc(roleName(me.role) || T('в команде', 'on the team')) + '</h2><span class="small">' + T('сбор ', 'call ') + '<b class="mono">' + esc(me.call || s.call || '—') + '</b>' + (memberPayText(me) && (me.rate || me.barter || me.pay === 'tfp') ? ' · ' + esc(memberPayText(me)) : '') + '</span>' + (me.note ? '<span class="small">' + esc(me.note) + '</span>' : '') + '</div>';
+  const addr = [s.place, s.address].filter(Boolean).join(', ');
+  h += '<div class="card" style="gap:10px"><div class="row between"><span class="small muted">' + T('Сбор', 'Call') + '</span><b class="mono">' + esc(s.call || '—') + '</b></div>' + (s.end ? '<div class="row between"><span class="small muted">' + T('Конец', 'Wrap') + '</span><b class="mono">' + esc(s.end) + '</b></div>' : '') +
+    (addr ? '<div class="col" style="gap:6px"><span class="small muted">' + T('Где', 'Where') + '</span><span>' + esc(addr) + '</span><a class="btn soft sm" style="align-self:flex-start" target="_blank" rel="noopener" href="https://yandex.ru/maps/?text=' + encodeURIComponent(addr) + '">' + T('Открыть на карте', 'Open map') + '</a></div>' : '') + '</div>';
+  if (s.timing && s.timing.length) h += '<h3 class="pad4">' + T('Тайминг', 'Schedule') + '</h3><div class="card tight">' + sortedTiming(s).map((x) => '<div class="li" style="align-items:flex-start"><span class="mono small" style="min-width:96px">' + esc(x.t) + (x.t2 ? '–' + esc(x.t2) : '') + '</span><span class="grow"><b style="font-weight:600">' + esc(x.w || '') + '</b>' + (x.who || x.det ? '<br><span class="tiny muted">' + esc([x.who, x.det].filter(Boolean).join(' · ')) + '</span>' : '') + '</span></div>').join('') + '</div>';
+  if (s.looks && s.looks.length) h += '<h3 class="pad4">' + T('Образы', 'Looks') + '</h3>' + s.looks.map((l, i) => '<div class="card ' + (i % 2 ? 'glow-sky' : 'glow-pink') + '" style="gap:6px"><span class="look-num">' + T('Образ', 'Look') + ' ' + pad(i + 1) + (l.done ? ' · ' + T('снят', 'shot') : '') + '</span>' + (l.name ? '<b>' + esc(l.name) + '</b>' : '') + [[T('модель', 'model'), l.model], [T('одежда', 'outfit'), l.clothes], [T('мейк', 'make-up'), l.makeup], [T('волосы', 'hair'), l.hair], [T('визажист', 'MUA'), l.mua], [T('референс', 'ref'), l.ref]].filter((r) => r[1]).map((r) => '<span class="small"><span class="muted">' + r[0] + ':</span> ' + esc(r[1]) + '</span>').join('') + '</div>').join('');
+  if (s.mood && s.mood.length) h += '<h3 class="pad4">' + T('Мудборд', 'Moodboard') + '</h3><div class="card tight">' + s.mood.map((m) => '<a class="li" target="_blank" rel="noopener" href="' + esc(m.url) + '"><span class="grow small" style="word-break:break-all">' + esc(m.url) + '</span></a>').join('') + '</div>';
+  if (s.team && s.team.length) h += '<h3 class="pad4">' + T('Команда', 'Team') + '</h3><div class="card tight">' + s.team.map((m) => '<div class="li"><span class="avatar sm soft">' + esc(initials(m.name)) + '</span><span class="grow"><b style="font-weight:600">' + esc(m.name) + (m.id === g.me ? T(' · это ты', ' · you') : '') + '</b><br><span class="tiny muted">' + esc(roleName(m.role)) + (m.call ? ' · ' + T('сбор ', 'call ') + esc(m.call) : '') + '</span></span></div>').join('') + '</div>';
+  h += '<span class="tiny muted pad4">' + T('Когда ' + (from.name || 'продюсер') + ' что-то поменяет, придёт новая ссылка — открой её, и проект здесь обновится.', 'When the producer changes something you’ll get a new link — open it and this project updates.') + '</span>';
+  h += '<button class="btn ghost" data-a="guestDelete" data-s="' + s.id + '">' + T('Убрать проект у себя', 'Remove from my SET') + '</button>';
+  h += '</div><div class="cta">' + (s.timing && s.timing.length ? '<a class="btn big grow" href="#/p/' + s.id + '/onset">' + T('Режим площадки', 'On set') + '</a>' : '') + (from.phone ? '<a class="btn ghost" style="min-height:60px;border-radius:26px" href="tel:' + esc(String(from.phone).replace(/[^\d+]/g, '')) + '">' + T('Позвонить', 'Call') + '</a>' : '') + '</div>' + nav('projects');
+  return h;
+}
+
 /* --- me / income --- */
 function myEntries() {
   const t = todayIso();
@@ -938,7 +1017,7 @@ function vMe() {
   const all = myEntries();
   const inPer = (s) => ui.per === 'all' || (ui.per === 'year' ? s.date.startsWith(String(now.getFullYear())) : s.date.startsWith(ym));
   const list = all.filter(inPer);
-  const shown = list.filter((s) => ui.src === 'all' || s.src === ui.src);
+  const shown = list.filter((s) => ui.src === 'all' || (ui.src === 'set' ? s.src !== 'own' : s.src === ui.src));
   const earned = list.filter((s) => s.my.paid).reduce((a, s) => a + myMoney(s), 0);
   const bartered = list.reduce((a, s) => a + myBarter(s), 0);
   const owed = list.filter((s) => !s.my.paid).reduce((a, s) => a + myMoney(s), 0);
@@ -1214,7 +1293,7 @@ const A = {
     o.step = clientOnly && o.step === 1 ? 4 : o.step + 1; window.scrollTo(0, 0); render();
   },
   onbBack: () => { const p = S.profile; const o = ui.onb; const clientOnly = p.roles.length > 0 && !p.ownRole && p.roles.every((r) => CLIENT_ROLES.includes(r)); o.step = clientOnly && o.step === 4 ? 1 : Math.max(1, o.step - 1); window.scrollTo(0, 0); render(); },
-  finishOnb: () => { S.profile.onboarded = true; save(); ui.onb = null; location.hash = '#/today'; render(); },
+  finishOnb: () => { S.profile.onboarded = true; ui.onb = null; const pj = S.pendingJoin; delete S.pendingJoin; save(); if (pj) { joinFrom(pj); return; } location.hash = '#/today'; render(); },
   editProfile: () => { ui.onb = { step: 1 }; location.hash = '#/welcome'; },
   demo: () => { loadDemo(); toast(T('Пример добавлен', 'Example added')); location.hash = '#/today'; render(); },
   createShoot: () => {
@@ -1235,9 +1314,11 @@ const A = {
   addTiming: (el) => { const s = getShoot(el.dataset.s); const all = sortedTiming(s); const last = all[all.length - 1]; const m = last && mins(last.t) != null ? mins(last.t) + 30 : mins(s.call) ?? 600; s.timing.push({ id: uid(), t: pad(Math.floor(m / 60) % 24) + ':' + pad(m % 60), w: '' }); save(); render(); },
   addLunch: (el) => { const s = getShoot(el.dataset.s); const a = mins(s.call) ?? 600; const d = durationH(s) * 60 || 480; const m = (Math.round((a + d / 2) / 30) * 30) % 1440; s.timing.push({ id: uid(), t: pad(Math.floor(m / 60)) + ':' + pad(m % 60), w: T('Обед для команды', 'Team lunch') }); const f = teamFood(s); save(); toast(T('Обед добавлен в тайминг', 'Lunch added') + (f ? ' · ' + f : '')); render(); },
   tab: (el) => { location.hash = '#/p/' + el.dataset.s + '/' + (el.dataset.x || 'main'); },
-  shareTeam: (el) => { const s = getShoot(el.dataset.s); shareSheet(T('Команде', 'To the team'), teamText(s)); },
+  shareTeam: async (el) => { const s = getShoot(el.dataset.s); const link = await shareLink(s, ''); shareSheet(T('Команде', 'To the team'), teamText(s) + '\n\n' + T('Проект целиком — сохрани в SET, там всегда свежая версия:', 'The whole project — save it in SET:') + '\n' + link); },
   shareClientGuide: (el) => { const s = getShoot(el.dataset.s); const c = s.checklist.find((x) => /памятка|guide/i.test(x.text)); if (c) { c.done = true; save(); } shareSheet(T('Памятка клиенту', 'Client guide'), guideText(s)); },
-  invitePerson: (el) => { const s = getShoot(el.dataset.s); const m = s.team.find((x) => x.id === el.dataset.x); if (!m.status) { m.status = 'asked'; save(); } ui.sheet = { type: 'share', title: m.name, text: personText(s, m), phone: S.people.find((p) => p.id === m.pid)?.phone }; render(); },
+  invitePerson: async (el) => { const s = getShoot(el.dataset.s); const m = s.team.find((x) => x.id === el.dataset.x); if (!m.status) { m.status = 'asked'; save(); } const link = await shareLink(s, m.id); ui.sheet = { type: 'share', title: m.name, text: personText(s, m) + '\n\n' + T('Тайминг, адрес и твой образ — в SET:', 'Schedule, address and your look — in SET:') + '\n' + link, phone: S.people.find((p) => p.id === m.pid)?.phone }; render(); },
+  pasteJoin: () => { const v = ($('#joinPaste')?.value || '').trim(); const i = v.indexOf('#/join/'); if (i < 0) { toast(T('Это не ссылка на проект SET', 'This is not a SET project link')); return; } joinFrom(v.slice(i + 7)); },
+  guestDelete: (el) => { if (!confirm(T('Убрать этот проект у себя? У продюсера он останется.', 'Remove this project from your SET? The producer keeps it.'))) return; S.shoots = S.shoots.filter((x) => x.id !== el.dataset.s); save(); location.hash = '#/projects'; },
   shareTo: async (el) => {
     const text = $('#shareText')?.value || ui.sheet.text; const k = el.dataset.x;
     if (k === 'copy') return copy(text);
@@ -1472,7 +1553,7 @@ function loadDemo() {
 function route() {
   const h = location.hash || '#/today';
   const parts = h.replace(/^#\/?/, '').split('/');
-  if (!S.profile.onboarded && parts[0] !== 'welcome' && parts[0] !== 'activate') { location.replace('#/welcome'); return null; }
+  if (!S.profile.onboarded && parts[0] !== 'welcome' && parts[0] !== 'activate' && parts[0] !== 'join') { location.replace('#/welcome'); return null; }
   return parts;
 }
 let lastHash = '';
@@ -1492,6 +1573,7 @@ function render() {
   else if (a === 'me') html = vMe();
   else if (a === 'settings') html = vSettings();
   else if (a === 'pro') html = vPro();
+  else if (a === 'join') { joinFrom(parts.slice(1).join('/')); return; }
   else if (a === 'activate') { const code = decodeURIComponent(parts.slice(1).join('/')); location.replace('#/pro'); doActivate(code); return; }
   else if (a === 'own') { const s = getShoot(b); if (s && !ui.sheet) ui.sheet = { type: 'own', data: JSON.parse(JSON.stringify(s)), isNew: false }; html = vCalendar(); }
   else if (a === 'p' && c === 'print') html = vPrint(b);
