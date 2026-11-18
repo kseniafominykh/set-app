@@ -195,3 +195,17 @@ select.inp { appearance: none; -webkit-appearance: none; background-image: linea
 input[type=time].inp, input[type=date].inp { -webkit-appearance: none; appearance: none; display: flex; align-items: center; text-align: left; line-height: 50px; }
 input[type=time].inp::-webkit-date-and-time-value, input[type=date].inp::-webkit-date-and-time-value { text-align: left; }
 .tl input[type=time].inp { padding: 0 10px; font-size: 15px; }
+
+/* splash — from the prototype «Заставка приложения» */
+#splash { position: fixed; inset: 0; z-index: 100; overflow: hidden; background: var(--paper); transition: opacity .55s ease; }
+#splash .sp-art { position: absolute; left: 50%; top: 50%; width: 390px; height: 844px; transform: translate(-50%, -50%) scale(var(--k, 1)); }
+#splash .sp-b { position: absolute; }
+#splash .sp-fade { position: absolute; left: 0; right: 0; bottom: 0; height: 120px; background: linear-gradient(180deg, rgba(247,246,244,0) 0%, #F7F6F4 70%); }
+#splash .sp-grain { position: absolute; left: 0; top: 0; opacity: .28; mix-blend-mode: multiply; pointer-events: none; }
+#splash .sp-col { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; color: var(--ink); }
+#splash .sp-logo { margin-top: 250px; position: relative; display: inline-flex; font-family: 'Neucha', cursive; font-size: 128px; line-height: .8; opacity: 0; transform: translateY(10px); transition: opacity .5s ease, transform .7s cubic-bezier(.2,.8,.2,1); }
+#splash .sp-sub { margin-top: 26px; font-family: 'Comfortaa', sans-serif; font-size: 15px; opacity: 0; transition: opacity .5s ease .2s; }
+#splash .sp-ver { margin-top: auto; margin-bottom: 34px; font-family: var(--mono); font-size: 12px; }
+#splash.in .sp-logo, #splash.in .sp-sub { opacity: 1; transform: none; }
+#splash.out { opacity: 0; pointer-events: none; }
+@media (prefers-reduced-motion: reduce) { #splash, #splash * { transition: none !important; } }

@@ -19,6 +19,20 @@
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+<div id="splash" aria-hidden="true"><div class="sp-art"><span class="sp-b" style="left:30px;top:380px;width:70px;height:330px;border-radius:40px;filter:blur(16px);background:linear-gradient(180deg,rgba(244,161,195,0) 0%,rgba(244,161,195,0.7) 70%,rgba(244,161,195,0.42) 100%)"></span><span class="sp-b" style="left:150px;top:340px;width:110px;height:360px;border-radius:40px;filter:blur(16px);background:linear-gradient(180deg,rgba(244,161,195,0) 0%,rgba(244,161,195,0.8) 70%,rgba(244,161,195,0.48) 100%)"></span><span class="sp-b" style="left:290px;top:400px;width:70px;height:300px;border-radius:40px;filter:blur(16px);background:linear-gradient(180deg,rgba(133,163,229,0) 0%,rgba(133,163,229,0.6) 70%,rgba(133,163,229,0.36) 100%)"></span><span class="sp-b" style="left:350px;top:300px;width:60px;height:360px;border-radius:40px;filter:blur(16px);background:linear-gradient(180deg,rgba(249,217,62,0) 0%,rgba(249,217,62,0.5) 70%,rgba(249,217,62,0.3) 100%)"></span><span class="sp-b" style="left:-60px;top:610px;width:220px;height:220px;border-radius:50%;filter:blur(7px);background:radial-gradient(circle at 50% 50%,rgba(244,161,195,0.55) 0%,rgba(244,161,195,0.5) 40%,rgba(249,217,62,0.75) 52%,rgba(59,79,176,0.85) 60%,rgba(9,118,156,0.6) 64%,rgba(133,163,229,0) 70%)"></span><span class="sp-b" style="left:110px;top:640px;width:200px;height:200px;border-radius:50%;filter:blur(7px);background:radial-gradient(circle at 50% 50%,rgba(244,161,195,0.55) 0%,rgba(244,161,195,0.5) 40%,rgba(249,217,62,0.75) 52%,rgba(59,79,176,0.85) 60%,rgba(9,118,156,0.6) 64%,rgba(133,163,229,0) 70%)"></span><span class="sp-b" style="left:250px;top:600px;width:230px;height:230px;border-radius:50%;filter:blur(7px);background:radial-gradient(circle at 50% 50%,rgba(244,161,195,0.55) 0%,rgba(244,161,195,0.5) 40%,rgba(249,217,62,0.75) 52%,rgba(59,79,176,0.85) 60%,rgba(9,118,156,0.6) 64%,rgba(133,163,229,0) 70%)"></span><span class="sp-fade"></span><svg width="390" height="844" class="sp-grain"><filter id="spGrain"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter><rect width="390" height="844" filter="url(#spGrain)"/></svg><div class="sp-col"><div class="sp-logo"><span>set</span><span style="position:absolute;width:44px;height:44px;right:-36px;top:-4px;border-radius:50%;filter:blur(2px);background:radial-gradient(circle at 46% 44%,rgba(244,161,195,0.95) 0%,rgba(244,161,195,0.8) 34%,rgba(133,163,229,0.75) 52%,rgba(59,79,176,0.8) 60%,rgba(249,217,62,0.6) 68%,rgba(249,217,62,0) 76%)"></span></div><span class="sp-sub">творите. остальное — на нас</span><span class="sp-ver">бета</span></div></div></div>
+<script>
+(function () {
+  var s = document.getElementById('splash'), t0 = Date.now(), done = false;
+  try { if ((JSON.parse(localStorage.getItem('set.v1') || '{}')).lang === 'en') s.querySelector('.sp-sub').textContent = 'create. we’ll handle the rest'; } catch (e) {}
+  var fit = function () { s.style.setProperty('--k', Math.max(innerWidth / 390, innerHeight / 844)); }; fit(); addEventListener('resize', fit);
+  var show = function () { s.classList.add('in'); };
+  try { Promise.all([document.fonts.load('128px Neucha', 'set'), document.fonts.load('15px Comfortaa', 'творите')]).then(show, show); } catch (e) { show(); }
+  setTimeout(show, 700);
+  var hide = function () { if (done) return; done = true; s.classList.add('out'); setTimeout(function () { s.remove(); }, 600); };
+  window.addEventListener('load', function () { setTimeout(hide, Math.max(0, 1400 - (Date.now() - t0))); });
+  setTimeout(hide, 3200);
+})();
+</script>
 <div id="app" aria-live="polite"></div>
 <div id="toast" role="status" aria-live="polite"></div>
 <input type="file" id="importFile" accept="application/json,.json" hidden>
