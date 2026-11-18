@@ -384,6 +384,14 @@ async function commandInvite(jwt) {
   console.log('Когда его примут: node Tools/asc.mjs internal - и сборки придут в TestFlight без проверки Apple.');
 }
 
+/** Кто в команде и чьи приглашения ещё не приняты. */
+async function commandTeam(jwt) {
+  const users = (await call(jwt, 'GET', '/users?limit=200&fields[users]=username,firstName,lastName,roles')).data ?? [];
+  for (const u of users) console.log(`  ${u.attributes.firstName} ${u.attributes.lastName} <${u.attributes.username}>: ${u.attributes.roles.join(', ')}`);
+  const pending = (await call(jwt, 'GET', '/userInvitations?limit=50&fields[userInvitations]=email,firstName,lastName,expirationDate')).data ?? [];
+  for (const p of pending) console.log(`  приглашение не принято: ${p.attributes.firstName} ${p.attributes.lastName} <${p.attributes.email}>, до ${p.attributes.expirationDate?.slice(0, 10)}`);
+}
+
 /** Отозвать ещё не принятое приглашение в команду. */
 async function commandUninvite(jwt) {
   const email = process.argv[3];
@@ -396,7 +404,7 @@ async function commandUninvite(jwt) {
 
 const commands = {
   status: commandStatus, bundle: commandBundle, builds: commandBuilds, internal: commandInternal,
-  external: commandExternal, submit: commandSubmit, link: commandLink, invite: commandInvite, uninvite: commandUninvite,
+  external: commandExternal, submit: commandSubmit, link: commandLink, invite: commandInvite, uninvite: commandUninvite, team: commandTeam,
 };
 const name = process.argv[2] ?? 'status';
 if (!commands[name]) die(`нет команды «${name}». Есть: ${Object.keys(commands).join(', ')}`);
