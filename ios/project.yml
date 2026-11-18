@@ -49,6 +49,8 @@ targets:
       base:
         PRODUCT_NAME: SET
         PRODUCT_BUNDLE_IDENTIFIER: com.naumkogan.set
+        # только iPhone: XcodeGen по умолчанию ставит таргету "1,2", а для iPad Apple требует все повороты (ITMS-90474)
+        TARGETED_DEVICE_FAMILY: "1"
         CODE_SIGN_ENTITLEMENTS: App/SET.entitlements
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
@@ -104,6 +106,7 @@ targets:
       base:
         PRODUCT_NAME: SETWidgets
         PRODUCT_BUNDLE_IDENTIFIER: com.naumkogan.set.widgets
+        TARGETED_DEVICE_FAMILY: "1"
         CODE_SIGN_ENTITLEMENTS: Widgets/SETWidgets.entitlements
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
         SKIP_INSTALL: YES

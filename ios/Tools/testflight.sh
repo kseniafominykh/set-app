@@ -203,6 +203,8 @@ if icons.get("CFBundleIconName") != "AppIcon":
     problems.append("иконка не скомпилирована из Assets.xcassets (нет CFBundleIcons)")
 if info.get("ITSAppUsesNonExemptEncryption") is not False:
     problems.append("ITSAppUsesNonExemptEncryption должен быть false")
+if info.get("UIDeviceFamily") != [1]:
+    problems.append(f"UIDeviceFamily = {info.get('UIDeviceFamily')}, нужно только iPhone [1] - иначе Apple требует все повороты для iPad (ITMS-90474)")
 if info.get("CFBundleVersion") != build:
     problems.append(f"номер сборки {info.get('CFBundleVersion')}, ожидался {build}")
 if info.get("CFBundleIdentifier") != app_id.split(".", 1)[1]:
