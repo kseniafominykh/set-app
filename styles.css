@@ -132,7 +132,7 @@ select.inp { appearance: none; -webkit-appearance: none; background-image: linea
 .cal button.sel { outline: 2px solid var(--ink); outline-offset: 1px; }
 .cal button.empty { visibility: hidden; }
 
-.tl { display: grid; grid-template-columns: 96px minmax(0,1fr) 36px; gap: 8px; align-items: center; padding: 6px 0; border-top: 1px solid var(--line); }
+.tl { display: grid; grid-template-columns: 96px minmax(0,1fr) 36px; gap: 8px; align-items: start; padding: 6px 0; border-top: 1px solid var(--line); }
 .tl:first-child { border-top: 0; }
 .tl input { min-height: 44px; }
 
@@ -209,3 +209,6 @@ input[type=time].inp::-webkit-date-and-time-value, input[type=date].inp::-webkit
 #splash.in .sp-logo, #splash.in .sp-sub { opacity: 1; transform: none; }
 #splash.out { opacity: 0; pointer-events: none; }
 @media (prefers-reduced-motion: reduce) { #splash, #splash * { transition: none !important; } }
+
+.tl textarea.tlw { min-height: 44px; resize: none; overflow: hidden; line-height: 1.3; padding-top: 11px; padding-bottom: 11px; }
+.cal span.empty { display: block; }

@@ -1,6 +1,6 @@
 'use strict';
 /* SET — beta. All data lives on this device (localStorage). */
-const VERSION = '0.10.0 beta';
+const VERSION = '0.10.1 beta';
 const APP_URL = (location.host + location.pathname).replace(/index\.html$/, '').replace(/\/$/, '');
 const KEY = 'set.v1';
 
@@ -385,12 +385,14 @@ async function verifyActivation(code) {
   const parts = String(code || '').split('.');
   if (parts.length !== 3) return { ok: false, why: 'format' };
   const [dev, until, sig] = parts;
+  if (!/^[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(dev)) return { ok: false, why: 'format' };
   if (dev !== S.deviceId) return { ok: false, why: 'device' };
   if (!/^\d{4}-\d{2}-\d{2}$/.test(until)) return { ok: false, why: 'format' };
   try {
     const key = await crypto.subtle.importKey('spki', Uint8Array.from(atob(SUB.pub), (c) => c.charCodeAt(0)), { name: 'ECDSA', namedCurve: 'P-256' }, false, ['verify']);
     const ok = await crypto.subtle.verify({ name: 'ECDSA', hash: 'SHA-256' }, key, b64u(sig), new TextEncoder().encode(dev + '.' + until));
-    return ok ? { ok: true, until } : { ok: false, why: 'sig' };
+    if (!ok) return { ok: false, why: 'sig' };
+    return until < todayIso() ? { ok: false, why: 'expired', until } : { ok: true, until };
   } catch (e) { return { ok: false, why: 'sig' }; }
 }
 function subStatusText() {
@@ -418,7 +420,7 @@ function vPro() {
 async function doActivate(code) {
   const r = await verifyActivation(code);
   if (r.ok) { S.pro = { until: r.until, code }; save(); toast(T('Подписка включена до ', 'Subscribed until ') + fmtDate(r.until, { year: true })); location.hash = '#/me'; }
-  else toast(r.why === 'device' ? T('Этот код для другого телефона', 'This code is for another device') : T('Код не подошёл — проверь, что скопирован целиком', 'Code didn’t work — copy it whole'));
+  else toast(r.why === 'device' ? T('Этот код для другого телефона', 'This code is for another device') : r.why === 'expired' ? T('Срок этой подписки уже закончился — напиши мне, пришлю новую ссылку', 'This subscription has expired — message me for a new link') : T('Код не подошёл — проверь, что скопирован целиком', 'Code didn’t work — copy it whole'));
 }
 
 
@@ -429,7 +431,7 @@ const TIPS = {
   project: ['Здесь главное: дата, место, подготовка. Вкладки сверху — мудборд, тайминг, команда, образы, смета. «Отправить команде» собирает всё в одно сообщение.', 'The essentials: date, venue, prep. Tabs above: moodboard, schedule, team, looks, budget. “Send to the team” packs it all into one message.'],
   mood: ['Добавь фото с телефона и ссылки на Pinterest. Команде всё уйдёт одной пачкой.', 'Add photos and Pinterest links. The team gets them in one go.'],
   timing: ['Нажми «⋯» у строки — добавишь «до», «кто» и что идёт параллельно. В режиме площадки SET будет подсказывать по этому таймингу.', 'Tap “⋯” on a row to add “until”, “who” and what runs in parallel. On set, SET will prompt you along this schedule.'],
-  team: ['Отмечай статус: позвала → идёт. «Написать» готовит приглашение с условиями. Ставки видишь только ты.', 'Track status: asked → in. “Message” drafts an invite with terms. Only you see rates.'],
+  team: ['Отмечай статус: позвали → идёт. «Написать» готовит приглашение с условиями. Ставки видишь только ты.', 'Track status: asked → in. “Message” drafts an invite with terms. Only you see rates.'],
   looks: ['Образ — это модель, одежда, мейк, волосы и фото в одной карточке. На площадке они пойдут по очереди.', 'A look = model, outfit, make-up, hair and a photo on one card. On set they queue up in order.'],
   budget: ['Нажми на строку — количество, ставка и форма оплаты: деньги, бартер, сертификат. «Подтянуть команду» перенесёт людей сюда.', 'Tap a line for qty, rate and payment: money, barter, voucher. “Pull in the team” brings people here.'],
   onset: ['Режим площадки: что идёт сейчас, что дальше и образы по очереди. Экран не гаснет. Разреши уведомления — SET напомнит за 10 минут до каждого пункта, пока приложение открыто.', 'On-set mode: what’s now, what’s next and looks in order. The screen stays on. Allow notifications and SET reminds you 10 minutes before each item while the app is open.'],
@@ -608,7 +610,7 @@ function vToday() {
   });
   if (nextS && nextS.date !== t) {
     const dd = parseIso(nextS.date);
-    h += '<a class="card ' + (nextS.src === 'own' ? 'dashed' : 'glow-pink') + '" href="' + (nextS.src === 'own' ? '#/own/' : '#/p/') + nextS.id + '" style="text-decoration:none;color:inherit;padding:22px"><div class="row between"><span class="kicker">' + T('Следующая', 'Next') + ' · ' + relDay(nextS.date) + '</span><span class="badge">' + esc(L() === 'en' ? KINDS[nextS.kind]?.en || '' : KINDS[nextS.kind]?.ru || '') + '</span></div><div class="row" style="align-items:flex-end;gap:14px"><span class="big-date" style="font-size:64px">' + dd.getDate() + '</span><span class="big-date" style="font-size:30px;padding-bottom:6px">' + MON_S[L()][dd.getMonth()].toUpperCase() + '</span></div><h2>' + esc(titleOf(nextS)) + '</h2><span class="small">' + T('сбор', 'call') + ' ' + esc(nextS.call) + (nextS.place ? ' · ' + esc(nextS.place) : '') + ' · ' + nextS.team.length + ' ' + T(plural(nextS.team.length, 'человек', 'человека', 'человек'), 'people') + '</span></a>';
+    h += '<a class="card ' + (nextS.src === 'own' ? 'dashed' : 'glow-pink') + '" href="' + (nextS.src === 'own' ? '#/own/' : '#/p/') + nextS.id + '" style="text-decoration:none;color:inherit;padding:22px"><div class="row between"><span class="kicker">' + T('Следующая', 'Next') + ' · ' + relDay(nextS.date) + '</span><span class="badge">' + esc(L() === 'en' ? KINDS[nextS.kind]?.en || '' : KINDS[nextS.kind]?.ru || '') + '</span></div><div class="row" style="align-items:flex-end;gap:14px"><span class="big-date" style="font-size:64px">' + dd.getDate() + '</span><span class="big-date" style="font-size:30px;padding-bottom:6px">' + MON_S[L()][dd.getMonth()].toUpperCase() + '</span></div><h2>' + esc(titleOf(nextS)) + '</h2><span class="small">' + T('сбор', 'call') + ' ' + esc(nextS.call) + (nextS.end ? '–' + esc(nextS.end) : '') + (nextS.place ? ' · ' + esc(nextS.place) : '') + (nextS.src !== 'own' && nextS.team.length ? ' · ' + nextS.team.length + ' ' + T(plural(nextS.team.length, 'человек', 'человека', 'человек'), 'people') : '') + '</span></a>';
   }
   const all = up.slice(0, 4).flatMap((s) => hints(s).map((x) => ({ ...x, s })));
   if (all.length) {
@@ -726,7 +728,7 @@ function pTiming(s) {
   rows.forEach((x) => {
     const p = b + '.timing:' + x.id;
     const open = ui.tlOpen === x.id;
-    h += '<div class="tl">' + inp(p + '.t', x.t, { type: 'time', r: true, aria: T('Время', 'Time'), style: 'padding:0 8px;font-size:15px' }) + '<input class="inp" data-b="' + p + '.w" value="' + esc(x.w) + '" aria-label="' + T('Что происходит', 'What happens') + '"><button class="textbtn" data-a="tlToggle" data-x="' + x.id + '" aria-expanded="' + open + '" aria-label="' + T('Подробнее', 'Details') + '">' + (open ? '▴' : '⋯') + '</button></div>';
+    h += '<div class="tl">' + inp(p + '.t', x.t, { type: 'time', r: true, aria: T('Время', 'Time'), style: 'padding:0 8px;font-size:15px' }) + '<textarea class="inp tlw" rows="1" data-b="' + p + '.w" aria-label="' + T('Что происходит', 'What happens') + '">' + esc(x.w) + '</textarea><button class="textbtn" data-a="tlToggle" data-x="' + x.id + '" aria-expanded="' + open + '" aria-label="' + T('Подробнее', 'Details') + '">' + (open ? '▴' : '⋯') + '</button></div>';
     if (open) h += '<div class="col" style="padding:0 0 10px 0;gap:6px"><div class="grid2">' + field(T('До', 'Until'), inp(p + '.t2', x.t2 || '', { type: 'time' })) + field(T('Кто', 'Who'), inp(p + '.who', x.who || '', { ph: T('визажисты, Альбина…', 'who') })) + '</div>' + field(T('Параллельно / детали', 'In parallel / details'), inp(p + '.det', x.det || '', { ph: T('что происходит одновременно', 'what happens at the same time') })) + '<button class="textbtn" style="align-self:flex-start;color:var(--red)" data-a="delRow" data-s="' + s.id + '" data-x="timing|' + x.id + '">' + T('Удалить строку', 'Delete row') + '</button></div>';
     else if (x.t2 || x.who || x.det) h += '<div class="tiny muted" style="padding:0 0 10px 104px;margin-top:-4px">' + esc([x.t2 && T('до ', 'till ') + x.t2, x.who, x.det].filter(Boolean).join(' · ')) + '</div>';
   });
@@ -891,7 +893,7 @@ function vCalendar() {
   let h = '<div class="screen"><div class="top"><span class="logo">set</span><a class="avatar" href="#/me">' + esc(initials(S.profile.name)) + '</a></div>';
   h += '<div class="row between pad4" style="align-items:flex-end"><div class="col" style="gap:0"><span class="big-date" style="font-size:44px;font-weight:600">' + esc(MONTHS_N[L()][c.m].toUpperCase()) + '</span><span class="big-date" style="font-size:32px;color:#5C5A63">' + c.y + '</span></div><div class="row"><button class="iconbtn" data-a="calMove" data-x="-1" aria-label="' + T('Предыдущий месяц', 'Previous month') + '">' + I.back + '</button><button class="iconbtn" data-a="calMove" data-x="1" aria-label="' + T('Следующий месяц', 'Next month') + '">' + I.next + '</button></div></div>';
   h += '<div class="cal">' + (L() === 'en' ? ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'] : ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']).map((w) => '<span class="wd">' + w + '</span>').join('');
-  for (let i = 0; i < off; i++) h += '<button class="empty" tabindex="-1" aria-hidden="true"></button>';
+  for (let i = 0; i < off; i++) h += '<span class="empty" aria-hidden="true"></span>';
   for (let d = 1; d <= dim; d++) {
     const iso = c.y + '-' + pad(c.m + 1) + '-' + pad(d);
     const list = byDay[iso] || [];
@@ -911,7 +913,7 @@ function vCalendar() {
     const dd = parseIso(s.date);
     const own = s.src === 'own';
     h += '<a class="card ' + (own ? 'dashed' : 'glow-' + (KINDS[s.kind]?.glow || 'pink')) + '" href="' + (own ? '#/own/' + s.id : '#/p/' + s.id) + '" style="text-decoration:none;color:inherit;flex-direction:row;gap:14px"><span class="col" style="gap:0;min-width:70px"><span class="tiny">' + esc(WD_L[L()][dd.getDay()]) + '</span><span class="big-date" style="font-size:44px">' + dd.getDate() + '</span><span class="big-date" style="font-size:22px">' + MON_S[L()][dd.getMonth()].toUpperCase() + '</span></span><span class="col grow" style="gap:6px"><b style="font-weight:600">' + esc(titleOf(s)) + '</b>' + (own ? '<span class="tiny muted">' + T('не через SET', 'outside SET') + (s.my.fee !== '' ? ' · ' + (num(s.my.fee) ? money(num(s.my.fee)) + ' ₽' : 'TFP') : '') + '</span>' : '') +
-      (s.call ? '<span class="row between small" style="background:rgba(255,255,255,.45);border-radius:10px;padding:6px 10px"><b>' + esc(s.call) + '</b><span>' + T('сбор', 'call') + '</span></span>' : '') + (s.end && !own ? '<span class="row between small" style="background:rgba(255,255,255,.45);border-radius:10px;padding:6px 10px"><b>' + esc(s.end) + '</b><span>' + T('конец', 'wrap') + '</span></span>' : '') + '</span></a>';
+      (s.call ? '<span class="row between small" style="background:rgba(255,255,255,.45);border-radius:10px;padding:6px 10px"><b>' + esc(s.call) + '</b><span>' + T('сбор', 'call') + '</span></span>' : '') + (s.end ? '<span class="row between small" style="background:rgba(255,255,255,.45);border-radius:10px;padding:6px 10px"><b>' + esc(s.end) + '</b><span>' + T('конец', 'wrap') + '</span></span>' : '') + '</span></a>';
   });
   h += '<span class="tiny muted pad4">' + T('Съёмки не через SET видишь только ты.', 'Only you see shoots outside SET.') + '</span></div>' + nav('calendar');
   return h;
@@ -1038,7 +1040,7 @@ function vMe() {
     '<div class="grid3">' + [[shifts, T(plural(shifts, 'смена', 'смены', 'смен'), 'shifts')], [list.length, T(plural(list.length, 'съёмка', 'съёмки', 'съёмок'), 'shoots')], [paidShifts ? money(earned / paidShifts) : '—', T('₽ за смену в среднем', 'avg per shift')]].map((x) => '<div class="col" style="gap:2px;padding:12px;border-radius:16px;background:rgba(255,255,255,.5)"><span class="mono" style="font-size:20px;font-weight:500">' + x[0] + '</span><span class="tiny">' + x[1] + '</span></div>').join('') + '</div>' +
     (bartered ? '<div class="row between small"><span>' + T('Бартером и сертификатами', 'In barter and vouchers') + '</span><b class="mono">' + money(bartered) + ' ₽</b></div>' : '') + (owed ? '<div class="inkcard row between"><span>' + T('Ещё должны заплатить', 'Still owed to you') + '</span><b class="mono">' + money(owed) + ' ₽</b></div>' : '') +
     (noCheck.length ? '<span class="small">' + T('Чек в «Мой налог» не выбит: ', 'No receipt yet: ') + esc(noCheck.map((s) => s.client || titleOf(s)).join(', ')) + '</span>' : '') + '</div>';
-  h += '<button class="btn big" data-a="openRecap" data-x="' + (ui.per === 'month' ? 'm0' : 'y0') + '">' + T('Поделиться итогами', 'Share my recap') + ' ↗</button>';
+  if (list.length) h += '<button class="btn big" data-a="openRecap" data-x="' + (ui.per === 'month' ? 'm0' : 'y0') + '">' + T('Поделиться итогами', 'Share my recap') + ' ↗</button>';
   if (mk.length) h += '<div class="card bars"><span class="tiny muted">' + T('По месяцам, ₽', 'By month') + '</span>' + mk.map((k) => '<div style="display:grid;grid-template-columns:62px minmax(0,1fr) 78px;gap:10px;align-items:center" class="small"><span>' + esc(MON_S[L()][Number(k.slice(5)) - 1] + ' ' + k.slice(2, 4)) + '</span><span class="bar"><i style="width:' + Math.round(months[k] / max * 100) + '%"></i></span><span class="mono" style="text-align:right">' + money(months[k]) + '</span></div>').join('') + '</div>';
   h += '<div class="chips">' + chip(T('Все', 'All'), ui.src === 'all', 'setUi', 'src|all', 'sm') + chip(T('Через SET', 'Via SET'), ui.src === 'set', 'setUi', 'src|set', 'sm') + chip(T('Мои вручную', 'Added by me'), ui.src === 'own', 'setUi', 'src|own', 'sm') + '</div>';
   if (!shown.length) h += '<div class="empty">' + T('Прошедшие съёмки появятся здесь. Свои — добавь в календаре.', 'Past shoots appear here. Add your own in the calendar.') + '</div>';
@@ -1394,8 +1396,8 @@ const A = {
     s.team.forEach((m) => {
       const pay = m.pay === 'tfp' ? 'barter' : (m.pay || 'money');
       const data = { sec: m.role === 'model' ? 'models' : 'team', label: roleName(m.role), desc: m.name + (m.note ? ' · ' + m.note : ''), qty: '1', unit: m.unit || 'смена', rate: m.rate || '', pay, barter: m.barter || '' };
-      const ex = s.budget.lines.find((y) => y.mid === m.id);
-      if (ex) Object.assign(ex, data); else { s.budget.lines.push({ id: uid(), q: false, mid: m.id, ...data }); n++; }
+      const ex = s.budget.lines.find((y) => y.mid === m.id) || s.budget.lines.find((y) => !y.mid && y.sec === data.sec && !num(y.rate) && !num(y.barter) && (y.label || '').toLowerCase() === data.label.toLowerCase());
+      if (ex) Object.assign(ex, data, { mid: m.id }); else { s.budget.lines.push({ id: uid(), q: false, mid: m.id, ...data }); n++; }
     });
     save(); render(); toast(T('Команда в смете', 'Team added') + (n ? ': +' + n : ''));
   },
@@ -1486,6 +1488,7 @@ async function mGet(id) { const d = await mdb(); return new Promise((res) => { c
 async function mDel(id) { const d = await mdb(); return new Promise((res) => { const t = d.transaction('img', 'readwrite'); t.objectStore('img').delete(id); t.oncomplete = res; t.onerror = res; }); }
 const urlCache = {};
 async function imgUrl(id) { if (urlCache[id]) return urlCache[id]; const b = await mGet(id); if (!b) return ''; urlCache[id] = URL.createObjectURL(b); return urlCache[id]; }
+function growTa(el) { el.style.height = 'auto'; el.style.height = Math.max(44, el.scrollHeight) + 'px'; }
 function hydrate() { document.querySelectorAll('img[data-img]:not([src])').forEach(async (el) => { const u = await imgUrl(el.dataset.img); if (u) el.src = u; else el.alt = T('фото не найдено на этом телефоне', 'photo not on this device'); }); }
 async function compress(file) {
   const bmp = await new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = URL.createObjectURL(file); });
@@ -1587,6 +1590,7 @@ function render() {
   if (location.hash === lastHash) window.scrollTo(0, keep); else window.scrollTo(0, 0);
   lastHash = location.hash;
   hydrate();
+  document.querySelectorAll('textarea.tlw').forEach(growTa);
   if (ui.sheet && ui.sheet.type === 'recap') paintRecap();
   if (activeB) { const e = document.querySelector('[data-b="' + CSS.escape(activeB) + '"]'); if (e) { e.focus(); try { if (selStart != null) e.setSelectionRange(selStart, selStart); } catch (x) { /* date inputs */ } } }
 }
@@ -1600,6 +1604,7 @@ document.addEventListener('click', (ev) => {
 });
 document.addEventListener('input', (ev) => {
   const el = ev.target; const b = el.dataset.b;
+  if (el.classList && el.classList.contains('tlw')) growTa(el);
   if (b) { setPath(b, el.value); if (el.dataset.live) { clearTimeout(el._t); el._t = setTimeout(render, 120); } }
 });
 document.addEventListener('change', (ev) => {
