@@ -209,3 +209,7 @@ input[type=time].inp::-webkit-date-and-time-value, input[type=date].inp::-webkit
 #splash.in .sp-logo, #splash.in .sp-sub { opacity: 1; transform: none; }
 #splash.out { opacity: 0; pointer-events: none; }
 @media (prefers-reduced-motion: reduce) { #splash, #splash * { transition: none !important; } }
+
+/* iPhone-приложение (ios/, класс html.native ставит только оно): полоса под часами и «чёлкой»,
+   чтобы прокрученный текст не заезжал под строку статуса; цвет берётся у body (тёмный в режиме площадки) */
+html.native body::after { content: ''; position: fixed; left: 0; right: 0; top: 0; height: var(--safe-t); background: inherit; z-index: 35; pointer-events: none; }

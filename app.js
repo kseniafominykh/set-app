@@ -1,7 +1,9 @@
 'use strict';
 /* SET — beta. All data lives on this device (localStorage). */
 const VERSION = '0.9.10 beta';
-const APP_URL = (location.host + location.pathname).replace(/index\.html$/, '').replace(/\/$/, '');
+// NATIVE - SET запущен как приложение для iPhone (ios/, мост native-shim.js); в браузере false
+const NATIVE = !!window.SET_NATIVE;
+const APP_URL = NATIVE ? 'kseniafominykh.github.io/set-app' : (location.host + location.pathname).replace(/index\.html$/, '').replace(/\/$/, '');
 const KEY = 'set.v1';
 
 /* ---------- helpers ---------- */
@@ -377,7 +379,8 @@ const sw = (label, sub, on, act, arg) => '<button class="switch" role="switch" a
 
 
 /* ---------- subscription logic ---------- */
-const isPro = () => !!(S.pro && S.pro.until >= todayIso());
+// в iPhone-приложении на время теста в TestFlight всё открыто: оплата по СБП мимо App Store там запрещена
+const isPro = () => NATIVE || !!(S.pro && S.pro.until >= todayIso());
 const freeLeft = () => !S.freeUsed;
 const canCreate = () => isPro() || freeLeft();
 const b64u = (s) => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((s.length + 3) % 4)), (c) => c.charCodeAt(0));
@@ -394,6 +397,7 @@ async function verifyActivation(code) {
   } catch (e) { return { ok: false, why: 'sig' }; }
 }
 function subStatusText() {
+  if (NATIVE) return T('Версия для iPhone: на время теста всё открыто', 'iPhone beta: everything is unlocked');
   if (isPro()) return T('Подписка до ', 'Subscribed until ') + fmtDate(S.pro.until, { year: true });
   if (freeLeft()) return T('Первый проект — бесплатно', 'Your first project is free');
   return T('Бесплатный проект использован', 'Free project used');
@@ -456,7 +460,7 @@ function notifCard(compact) {
   const st = notifState();
   const isIOS = /iPhone|iPad/.test(navigator.userAgent);
   const standalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
-  if (st === 'granted') return compact ? '' : '<div class="card"><h3>' + T('Уведомления', 'Notifications') + '</h3><span class="small">' + T('Включены ✓ SET напомнит о пунктах тайминга в режиме площадки, пока приложение открыто.', 'On ✓ SET reminds you of schedule items in on-set mode while the app is open.') + '</span><button class="btn soft sm" data-a="testNotif">' + T('Проверить', 'Test') + '</button></div>';
+  if (st === 'granted') return compact ? '' : '<div class="card"><h3>' + T('Уведомления', 'Notifications') + '</h3><span class="small">' + (NATIVE ? T('Включены ✓ SET напомнит накануне съёмки, за час до сбора и за 10 минут до каждого пункта тайминга - даже когда приложение закрыто.', 'On ✓ SET reminds you the evening before, an hour before call time and 10 minutes before each schedule item - even when the app is closed.') : T('Включены ✓ SET напомнит о пунктах тайминга в режиме площадки, пока приложение открыто.', 'On ✓ SET reminds you of schedule items in on-set mode while the app is open.')) + '</span><button class="btn soft sm" data-a="testNotif">' + T('Проверить', 'Test') + '</button></div>';
   if (st === 'unsupported' || (isIOS && !standalone)) return compact ? '' : '<div class="card"><h3>' + T('Уведомления', 'Notifications') + '</h3><span class="small muted">' + T('На iPhone уведомления работают, только если SET добавлен на экран «Домой» и открыт оттуда.', 'On iPhone, notifications work only when SET is added to the Home Screen and opened from there.') + '</span></div>';
   if (st === 'denied') return compact ? '' : '<div class="card"><h3>' + T('Уведомления', 'Notifications') + '</h3><span class="small muted">' + T('Запрещены. Включить можно в настройках телефона → SET → Уведомления.', 'Blocked. Turn them on in your phone settings → SET → Notifications.') + '</span></div>';
   return '<div class="' + (compact ? 'hint' : 'card') + '"' + (compact ? ' style="align-items:center"' : '') + '>' + (compact ? '<span class="dot"></span>' : '<h3>' + T('Уведомления', 'Notifications') + '</h3>') + '<span class="' + (compact ? 'grow' : 'small') + '">' + T('Разреши уведомления — SET напомнит за 10 минут до каждого пункта тайминга.', 'Allow notifications — SET reminds you 10 minutes before each schedule item.') + '</span><button class="btn sm' + (compact ? ' soft' : '') + '" data-a="askNotif">' + T('Разрешить', 'Allow') + '</button></div>';
@@ -952,7 +956,7 @@ function vMe() {
   const rl = p.roles.map(roleName).concat(p.ownRole ? [p.ownRole] : []).join(' · ');
   let h = '<div class="screen"><div class="top">' + backBtn('#/today') + '<a class="iconbtn" href="#/settings" aria-label="' + T('Настройки', 'Settings') + '">' + I.gear + '</a></div>';
   h += '<div class="row pad4" style="gap:14px"><span class="avatar" style="width:60px;height:60px;border-radius:30px;font-size:24px">' + esc(initials(p.name)) + '</span><span class="col grow" style="gap:2px"><b style="font-size:18px">' + esc(p.name || T('Без имени', 'No name')) + '</b><span class="small muted">' + esc(rl) + '</span></span><button class="btn sm soft" data-a="editProfile">' + T('Изменить', 'Edit') + '</button></div>';
-  h += '<a class="row between card" href="#/pro" style="flex-direction:row;text-decoration:none;color:inherit;padding:14px 18px"><span class="small">' + esc(subStatusText()) + '</span><span class="badge ' + (isPro() ? 'ok' : 'ink') + '">' + (isPro() ? 'SET Pro' : T('Подписка', 'Subscribe')) + '</span></a>';
+  h += '<' + (NATIVE ? 'div' : 'a href="#/pro"') + ' class="row between card" style="flex-direction:row;text-decoration:none;color:inherit;padding:14px 18px"><span class="small">' + esc(subStatusText()) + '</span><span class="badge ' + (isPro() ? 'ok' : 'ink') + '">' + (isPro() ? 'SET Pro' : T('Подписка', 'Subscribe')) + '</span></' + (NATIVE ? 'div' : 'a') + '>';
   h += '<h1 class="pad4">' + T('Мои съёмки', 'My shoots') + '</h1>' + tip('me');
   h += '<div class="chips">' + chip(MONTHS_N[L()][now.getMonth()], ui.per === 'month', 'setUi', 'per|month') + chip(String(now.getFullYear()), ui.per === 'year', 'setUi', 'per|year') + chip(T('Всё время', 'All time'), ui.per === 'all', 'setUi', 'per|all') + '</div>';
   h += '<div class="card glow-pink" style="padding:22px;gap:14px"><div class="col" style="gap:2px"><span class="tiny">' + T('Заработано', 'Earned') + '</span><span class="h1" style="font-family:var(--mono);font-size:42px;letter-spacing:-0.03em">' + money(earned) + ' ₽</span></div>' +
@@ -979,8 +983,9 @@ function vSettings() {
   h += '<div class="card"><h3>' + T('Язык', 'Language') + '</h3><div class="chips">' + chip('Русский', S.lang === 'ru', 'lang', 'ru') + chip('English', S.lang === 'en', 'lang', 'en') + '</div></div>';
   h += notifCard(false);
   h += '<div class="card tight">' + sw(T('Подсказки-обучалки', 'Coaching tips'), T('короткие подсказки на каждом экране', 'short tips on each screen'), !S.tipsOff, 'toggleTips', '') + '</div>' + (S.seenTips && Object.keys(S.seenTips).length && !S.tipsOff ? '<button class="textbtn" style="align-self:flex-start" data-a="resetTips">' + T('Показать подсказки заново', 'Show tips again') + '</button>' : '');
-  h += '<div class="card glow-teal"><h3>' + T('Как поставить на телефон', 'Install on your phone') + '</h3><span class="small">' + T('iPhone: в Safari нажми «Поделиться» → «На экран Домой». Android: в Chrome меню ⋮ → «Добавить на главный экран». SET откроется как приложение и будет работать без интернета.', 'iPhone: in Safari tap Share → Add to Home Screen. Android: Chrome menu ⋮ → Add to Home screen.') + '</span></div>';
-  h += '<a class="card glow-pink" href="#/pro" style="text-decoration:none;color:inherit"><h3>' + T('Подписка', 'Subscription') + '</h3><span class="small">' + esc(subStatusText()) + '</span></a>';
+  if (NATIVE) h += '<div class="card glow-teal"><h3>' + T('Виджеты', 'Widgets') + '</h3><span class="small">' + T('Зажми пустое место на экране «Домой» → «Изменить» → «Добавить виджет» → SET. Есть «Ближайшая съёмка», «Тайминг дня» и «Доход», а маленькие - для экрана блокировки.', 'Touch and hold the Home Screen → Edit → Add Widget → SET: Next shoot, Today’s schedule and Income, plus small ones for the Lock Screen.') + '</span></div>';
+  else h += '<div class="card glow-teal"><h3>' + T('Как поставить на телефон', 'Install on your phone') + '</h3><span class="small">' + T('iPhone: в Safari нажми «Поделиться» → «На экран Домой». Android: в Chrome меню ⋮ → «Добавить на главный экран». SET откроется как приложение и будет работать без интернета.', 'iPhone: in Safari tap Share → Add to Home Screen. Android: Chrome menu ⋮ → Add to Home screen.') + '</span></div>';
+  if (!NATIVE) h += '<a class="card glow-pink" href="#/pro" style="text-decoration:none;color:inherit"><h3>' + T('Подписка', 'Subscription') + '</h3><span class="small">' + esc(subStatusText()) + '</span></a>';
   h += '<div class="card"><h3>' + T('Резервная копия', 'Backup') + '</h3><span class="small muted">' + T('Все данные хранятся только в этом телефоне. Сохраняй копию раз в неделю — и перед сменой телефона.', 'Your data lives only on this device. Save a backup weekly.') + '</span><div class="grid2"><button class="btn soft" data-a="exportJson">' + T('Сохранить копию', 'Save backup') + '</button><button class="btn soft" data-a="importJson">' + T('Загрузить копию', 'Restore') + '</button></div></div>';
   h += '<div class="card"><h3>' + T('Пример', 'Example') + '</h3><span class="small muted">' + T('Добавит съёмку для бренда, TFP, частного клиента и пару прошедших — чтобы всё потрогать.', 'Adds sample shoots to explore.') + '</span><button class="btn soft" data-a="demo">' + T('Добавить пример', 'Add example') + '</button></div>';
   h += '<div class="card"><h3>' + T('Начать с чистого листа', 'Start over') + '</h3><button class="btn danger" data-a="wipe">' + T('Удалить все данные', 'Delete all data') + '</button></div>';
@@ -1473,6 +1478,7 @@ function route() {
   const h = location.hash || '#/today';
   const parts = h.replace(/^#\/?/, '').split('/');
   if (!S.profile.onboarded && parts[0] !== 'welcome' && parts[0] !== 'activate') { location.replace('#/welcome'); return null; }
+  if (NATIVE && (parts[0] === 'pro' || parts[0] === 'activate')) { location.replace('#/me'); return null; }
   return parts;
 }
 let lastHash = '';
@@ -1544,3 +1550,32 @@ if (S.freeUsed == null) { S.freeUsed = S.shoots.some((x) => x.src === 'set' && !
 document.documentElement.lang = S.lang;
 render();
 if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(() => {});
+
+/* ---------- iPhone-приложение: данные для виджетов и напоминаний (в браузере не вызывается) ---------- */
+function nativeSnapshot() {
+  const t = todayIso();
+  const now = new Date();
+  const ym = now.getFullYear() + '-' + pad(now.getMonth() + 1);
+  const yy = String(now.getFullYear());
+  const up = S.shoots.filter((s) => s.date && s.date >= t && s.status !== 'done').sort(sortByDate).slice(0, 8);
+  const mine = myEntries();
+  const paidSum = (list) => list.filter((s) => s.my && s.my.paid).reduce((a, s) => a + myMoney(s), 0);
+  const inMonth = mine.filter((s) => s.date.startsWith(ym));
+  return {
+    v: 1, lang: L(), name: S.profile.name || '',
+    shoots: up.map((s) => ({
+      id: s.id, title: titleOf(s), kind: s.kind || 'custom', glow: (KINDS[s.kind] && KINDS[s.kind].glow) || 'pink',
+      kindLabel: KINDS[s.kind] ? (L() === 'en' ? KINDS[s.kind].en : KINDS[s.kind].ru) : '',
+      date: s.date, call: s.call || '', end: s.end || '', place: s.place || '', address: s.address || '',
+      team: (s.team || []).length, own: s.src === 'own',
+      timing: (Array.isArray(s.timing) ? sortedTiming(s) : []).filter((x) => mins(x.t) != null).slice(0, 40)
+        .map((x) => ({ t: x.t, t2: x.t2 || '', w: x.w || '', who: x.who || '' }))
+    })),
+    income: {
+      month: paidSum(inMonth), year: paidSum(mine.filter((s) => s.date.startsWith(yy))),
+      owed: mine.filter((s) => s.my && !s.my.paid).reduce((a, s) => a + myMoney(s), 0),
+      shootsMonth: inMonth.length, monthLabel: MONTHS_N[L()][now.getMonth()], yearLabel: yy
+    }
+  };
+}
+if (NATIVE) window.SET_NATIVE.snapshot = nativeSnapshot;
