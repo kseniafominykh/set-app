@@ -329,7 +329,7 @@ function teamText(s) {
 }
 function personText(s, m) {
   const first = (m.name || '').split(' ')[0];
-  return T('Привет' + (first ? ', ' + first : '') + '! Зову тебя на съёмку «' + titleOf(s) + '»' + (m.role ? ' — ' + (roleName(m.role) || '').toLowerCase() : '') + ': ' + (s.date ? fmtDate(s.date, { wd: true }) : 'дата скоро') + (m.call || s.call ? ', сбор в ' + (m.call || s.call) : '') + (s.address ? ', ' + s.address : '') + '.' + (memberPayText(m) ? ' Условия: ' + memberPayText(m) + '.' : '') + (m.note ? ' ' + m.note + '.' : '') + ' Сможешь?',
+  return T('Привет' + (first ? ', ' + first : '') + '! Зову тебя на съёмку «' + titleOf(s) + '».' + (m.role ? ' Роль: ' + (roleName(m.role) || '').toLowerCase() + '.' : '') + ' Когда: ' + (s.date ? fmtDate(s.date, { wd: true }) : 'дата скоро') + (m.call || s.call ? ', сбор в ' + (m.call || s.call) : '') + '.' + (s.address ? ' Где: ' + s.address + '.' : '') + (memberPayText(m) ? ' Условия: ' + memberPayText(m) + '.' : '') + (m.note ? ' ' + m.note.replace(/\.$/, '') + '.' : '') + ' Сможешь?',
     'Hi' + (first ? ' ' + first : '') + '! Inviting you as ' + roleName(m.role) + ' for “' + titleOf(s) + '”: ' + (s.date ? fmtDate(s.date, { wd: true }) : 'date tbc') + (m.call || s.call ? ', call ' + (m.call || s.call) : '') + (s.address ? ', ' + s.address : '') + '.' + (memberPayText(m) ? ' Terms: ' + memberPayText(m) + '.' : '') + ' Are you in?');
 }
 function guideText(s) {
@@ -399,7 +399,7 @@ function subStatusText() {
   return T('Бесплатный проект использован', 'Free project used');
 }
 function vPro() {
-  const msg = T('Привет! Оплатила подписку SET. Мой код: ', 'Hi! I paid for SET. My code: ') + S.deviceId + (S.profile.phone ? T(', телефон: ', ', phone: ') + S.profile.phone : '') + (S.profile.name ? ' (' + S.profile.name + ')' : '');
+  const msg = T('Привет! Подписка SET оплачена. Мой код: ', 'Hi! I paid for SET. My code: ') + S.deviceId + (S.profile.phone ? T(', телефон: ', ', phone: ') + S.profile.phone : '') + (S.profile.name ? ' (' + S.profile.name + ')' : '');
   let h = '<div class="screen"><div class="top">' + backBtn('#/me') + '<span class="kicker">' + T('Подписка', 'Subscription') + '</span><span style="width:44px"></span></div>';
   h += '<h1 class="pad4">SET<br>' + T('организатору', 'for organisers') + '</h1>';
   h += '<div class="card glow-pink" style="padding:22px"><span class="small">' + esc(subStatusText()) + '</span><span class="mono" style="font-size:38px;letter-spacing:-0.02em">' + money(SUB.price) + ' ₽<span class="small muted" style="font-family:var(--body)"> / ' + T('месяц', 'month') + '</span></span>' +
@@ -738,19 +738,19 @@ function pTiming(s) {
 function pTimingClear(s) { return s.timing.length ? '<button class="textbtn" data-a="clearTiming" data-s="' + s.id + '">' + T('Очистить тайминг', 'Clear schedule') + '</button>' : ''; }
 function pTeam(s) {
   let h = '';
-  const st = { yes: [T('идёт', 'in'), 'ok'], no: [T('не может', 'out'), ''], asked: [T('позвала', 'asked'), 'warn'], '': [T('не звала', 'not asked'), ''] };
+  const st = { yes: [T('идёт', 'in'), 'ok'], no: [T('не может', 'out'), ''], asked: [T('позвали', 'asked'), 'warn'], '': [T('не звали', 'not asked'), ''] };
   if (!s.team.length) h += '<div class="empty">' + T('Добавь людей — из своей базы или новых', 'Add people — from your base or new') + '</div>';
   s.team.forEach((m) => {
     const x = st[m.status || ''];
     h += '<div class="card" style="gap:8px"><div class="row"><span class="avatar sm soft">' + esc(initials(m.name)) + '</span><span class="col grow" style="gap:0"><b style="font-weight:600">' + esc(m.name) + '</b><span class="tiny muted">' + esc(roleName(m.role)) + (m.call ? ' · ' + T('сбор', 'call') + ' ' + esc(m.call) : '') + (memberPayText(m) ? ' · ' + esc(memberPayText(m)) : '') + '</span>' + (m.note ? '<br><span class="tiny muted">' + esc(m.note) + '</span>' : '') + '</span><span class="badge ' + x[1] + '">' + x[0] + '</span><button class="iconbtn" style="width:40px;height:40px;border:none" data-a="editMember" data-s="' + s.id + '" data-x="' + m.id + '" aria-label="' + T('Изменить', 'Edit') + '">✎</button></div>' +
-      '<div class="row wrap">' + [['asked', T('Позвала', 'Asked')], ['yes', T('Идёт', 'In')], ['no', T('Не может', 'Out')]].map(([k, l]) => '<button class="chip sm" aria-pressed="' + (m.status === k) + '" data-a="memberStatus" data-s="' + s.id + '" data-x="' + m.id + '|' + k + '">' + l + '</button>').join('') + '<button class="chip sm" data-a="invitePerson" data-s="' + s.id + '" data-x="' + m.id + '">' + T('Написать', 'Message') + '</button></div></div>';
+      '<div class="row wrap">' + [['asked', T('Позвали', 'Asked')], ['yes', T('Идёт', 'In')], ['no', T('Не может', 'Out')]].map(([k, l]) => '<button class="chip sm" aria-pressed="' + (m.status === k) + '" data-a="memberStatus" data-s="' + s.id + '" data-x="' + m.id + '|' + k + '">' + l + '</button>').join('') + '<button class="chip sm" data-a="invitePerson" data-s="' + s.id + '" data-x="' + m.id + '">' + T('Написать', 'Message') + '</button></div></div>';
   });
   h += '<div class="grid2"><button class="btn soft" data-a="pickPeople" data-s="' + s.id + '">' + T('Из моих людей', 'From my people') + '</button><button class="btn soft" data-a="editMember" data-s="' + s.id + '" data-x="">' + T('+ Новый человек', '+ New person') + '</button></div>';
   const handles = s.team.map((m) => S.people.find((p) => p.id === m.pid)?.insta).filter(Boolean);
   if (handles.length) h += '<button class="btn ghost" data-a="copyText" data-x="' + esc(handles.map((x) => (x.startsWith('@') ? x : '@' + x)).join(' ')) + '">' + T('Скопировать отметки для Instagram', 'Copy Instagram tags') + '</button>';
   const food = teamFood(s);
   if (food) h += '<div class="hint"><span class="dot"></span><span>' + T('Еда: ', 'Food: ') + esc(food) + '</span></div>';
-  h += '<span class="tiny muted pad4">' + T('В каждом приглашении — ссылка на проект: человек сохранит его в своём SET. Поменяла тайминг или адрес — нажми «Отправить команде», и проект обновится у всех, кто откроет новую ссылку.', 'Every invite has a project link the person saves in their SET. Changed something? Tap “Send to the team” and it updates for everyone who opens the new link.') + '</span>';
+  h += '<span class="tiny muted pad4">' + T('В каждом приглашении — ссылка на проект: человек сохранит его в своём SET. Поменялся тайминг или адрес — нажми «Отправить команде», и проект обновится у всех, кто откроет новую ссылку.', 'Every invite has a project link the person saves in their SET. Changed something? Tap “Send to the team” and it updates for everyone who opens the new link.') + '</span>';
   h += '<span class="lock pad4">' + I.lock + T('Ставки видишь только ты. Каждый получает только своё.', 'Only you see rates.') + '</span>';
   return h;
 }
@@ -1040,12 +1040,12 @@ function vMe() {
     (noCheck.length ? '<span class="small">' + T('Чек в «Мой налог» не выбит: ', 'No receipt yet: ') + esc(noCheck.map((s) => s.client || titleOf(s)).join(', ')) + '</span>' : '') + '</div>';
   h += '<button class="btn big" data-a="openRecap" data-x="' + (ui.per === 'month' ? 'm0' : 'y0') + '">' + T('Поделиться итогами', 'Share my recap') + ' ↗</button>';
   if (mk.length) h += '<div class="card bars"><span class="tiny muted">' + T('По месяцам, ₽', 'By month') + '</span>' + mk.map((k) => '<div style="display:grid;grid-template-columns:62px minmax(0,1fr) 78px;gap:10px;align-items:center" class="small"><span>' + esc(MON_S[L()][Number(k.slice(5)) - 1] + ' ' + k.slice(2, 4)) + '</span><span class="bar"><i style="width:' + Math.round(months[k] / max * 100) + '%"></i></span><span class="mono" style="text-align:right">' + money(months[k]) + '</span></div>').join('') + '</div>';
-  h += '<div class="chips">' + chip(T('Все', 'All'), ui.src === 'all', 'setUi', 'src|all', 'sm') + chip(T('Через SET', 'Via SET'), ui.src === 'set', 'setUi', 'src|set', 'sm') + chip(T('Добавила сама', 'Added by me'), ui.src === 'own', 'setUi', 'src|own', 'sm') + '</div>';
+  h += '<div class="chips">' + chip(T('Все', 'All'), ui.src === 'all', 'setUi', 'src|all', 'sm') + chip(T('Через SET', 'Via SET'), ui.src === 'set', 'setUi', 'src|set', 'sm') + chip(T('Мои вручную', 'Added by me'), ui.src === 'own', 'setUi', 'src|own', 'sm') + '</div>';
   if (!shown.length) h += '<div class="empty">' + T('Прошедшие съёмки появятся здесь. Свои — добавь в календаре.', 'Past shoots appear here. Add your own in the calendar.') + '</div>';
   shown.forEach((s) => {
     const d = parseIso(s.date); const fee = myMoney(s); const br = myBarter(s); const tfp = s.my.pay === 'tfp' || (s.my.fee !== '' && fee === 0 && !br);
     const badge = (s.my.fee === '' && !br && s.my.pay !== 'tfp') ? ['', T('сумма?', 'amount?')] : (!fee && br) ? ['', payName(s.my.pay)] : tfp ? ['', T('без оплаты', 'unpaid')] : s.my.paid ? ['ok', s.my.check ? T('оплачено · чек', 'paid · receipt') : T('оплачено', 'paid')] : ['ink', T('ждёт оплаты', 'awaiting')];
-    h += '<button class="card ' + (s.src === 'own' ? 'dashed' : '') + '" data-a="editIncome" data-x="' + s.id + '" style="flex-direction:row;gap:12px;align-items:flex-start;text-align:left;padding:16px"><span class="col mono" style="gap:0;min-width:42px"><span style="font-size:20px">' + d.getDate() + '</span><span class="tiny">' + MON_S[L()][d.getMonth()] + (d.getFullYear() !== now.getFullYear() ? ' ' + String(d.getFullYear()).slice(2) : '') + '</span></span><span class="col grow" style="gap:3px"><b style="font-weight:600">' + esc(titleOf(s)) + '</b><span class="tiny muted">' + esc(roleName(s.my.role)) + ' · ' + s.my.shifts + ' ' + T(plural(Number(s.my.shifts) || 0, 'смена', 'смены', 'смен'), 'shifts') + ' · ' + (s.src === 'own' ? T('добавила сама', 'added by me') : T('через SET', 'via SET')) + '</span></span><span class="col" style="align-items:flex-end;gap:4px"><span class="mono">' + (tfp ? 'TFP' : fee ? money(fee) + ' ₽' + (br ? ' + ' + money(br) : '') : br ? money(br) + ' ₽' : '—') + '</span><span class="badge ' + badge[0] + '">' + badge[1] + '</span></span></button>';
+    h += '<button class="card ' + (s.src === 'own' ? 'dashed' : '') + '" data-a="editIncome" data-x="' + s.id + '" style="flex-direction:row;gap:12px;align-items:flex-start;text-align:left;padding:16px"><span class="col mono" style="gap:0;min-width:42px"><span style="font-size:20px">' + d.getDate() + '</span><span class="tiny">' + MON_S[L()][d.getMonth()] + (d.getFullYear() !== now.getFullYear() ? ' ' + String(d.getFullYear()).slice(2) : '') + '</span></span><span class="col grow" style="gap:3px"><b style="font-weight:600">' + esc(titleOf(s)) + '</b><span class="tiny muted">' + esc(roleName(s.my.role)) + ' · ' + s.my.shifts + ' ' + T(plural(Number(s.my.shifts) || 0, 'смена', 'смены', 'смен'), 'shifts') + ' · ' + (s.src === 'own' ? T('добавлено вручную', 'added by me') : T('через SET', 'via SET')) + '</span></span><span class="col" style="align-items:flex-end;gap:4px"><span class="mono">' + (tfp ? 'TFP' : fee ? money(fee) + ' ₽' + (br ? ' + ' + money(br) : '') : br ? money(br) + ' ₽' : '—') + '</span><span class="badge ' + badge[0] + '">' + badge[1] + '</span></span></button>';
   });
   h += '<div class="grid2"><button class="btn soft" data-a="ownSheet" data-x="">' + T('+ Своя съёмка', '+ Own shoot') + '</button><button class="btn soft" data-a="exportCsv">' + T('Таблица CSV', 'Export CSV') + '</button></div>';
   h += '<span class="lock pad4">' + I.lock + T('Суммы видишь только ты.', 'Only you see the amounts.') + '</span></div>' + nav('');
@@ -1149,7 +1149,7 @@ function vSheet() {
       h += sw(T('Показать сумму', 'Show the amount'), T('выключи — останутся съёмки и часы', 'off — only shoots and hours stay'), !S.rcHide, 'rcHide', '');
       if (d.owed && !S.rcHide) h += '<span class="tiny muted">' + T('В сумме и то, что ещё должны заплатить: ', 'Includes money still owed: ') + money(d.owed) + ' ₽</span>';
       h += '<button class="btn big" data-a="rcShare">' + T('Поделиться в сторис', 'Share to stories') + '</button><button class="btn soft" data-a="rcSave">' + T('Сохранить картинку', 'Save image') + '</button>';
-      h += '<span class="tiny muted">' + T('В сторис добавь стикер «Ссылка» на ' + APP_URL + ' — так тебя спросят «где ты это сделала?» и найдут приложение', 'Add a Link sticker to ' + APP_URL + ' in your story — that’s how friends find the app') + '</span>';
+      h += '<span class="tiny muted">' + T('В сторис добавь стикер «Ссылка» на ' + APP_URL + ' — так друзья спросят «где это сделано?» и найдут приложение', 'Add a Link sticker to ' + APP_URL + ' in your story — that’s how friends find the app') + '</span>';
     }
   }
   if (sh.type === 'menu') {
