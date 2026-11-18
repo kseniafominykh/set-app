@@ -1,6 +1,6 @@
 'use strict';
 /* SET — beta. All data lives on this device (localStorage). */
-const VERSION = '0.10.1 beta';
+const VERSION = '0.10.2 beta';
 const APP_URL = (location.host + location.pathname).replace(/index\.html$/, '').replace(/\/$/, '');
 const KEY = 'set.v1';
 
@@ -233,34 +233,13 @@ const sortByDate = (a, b) => (a.date || '9999').localeCompare(b.date || '9999') 
 
 function newShoot(kind, o = {}) {
   const s = {
-    id: uid(), src: 'set', kind, client: '', what: '', date: '', call: '10:00', end: '18:00', place: '', address: '', notes: '',
+    id: uid(), src: 'set', kind, client: '', what: '', date: '', call: '', end: '', place: '', address: '', notes: '',
     timing: [], team: [], looks: [], checklist: [],
     budget: { lines: [], note: '', reserve: '10', v2: true }, mood: [], rights: '', deliver: '', retouch: '',
     modules: { team: true, timing: true, mood: true, looks: kind !== 'personal', budget: kind === 'brand' || kind === 'custom', print: true },
     my: { role: S.profile.roles[0] || 'producer', fee: '', pay: 'money', barter: '', shifts: 1, paid: false, check: false, note: '' },
     onset: { idx: 0 }, status: 'plan', created: Date.now()
   };
-  const tl = (arr) => arr.map(([t, w]) => ({ id: uid(), t, w }));
-  const ck = (arr) => arr.map((text) => ({ id: uid(), text, done: false }));
-  if (kind === 'brand') {
-    s.call = '09:00'; s.end = '19:00';
-    s._tpl = tl([['09:00', T('Сбор, кофе, распаковка вещей', 'Call, coffee, unpack')], ['09:30', T('Грим и волосы', 'Make-up and hair')], ['11:00', T('Образ 01', 'Look 01')], ['13:00', T('Обед', 'Lunch')], ['14:00', T('Образы дальше по списку', 'Looks continue')], ['18:30', T('Сбор вещей, возврат', 'Pack up, returns')], ['19:00', T('Конец, сдаём студию', 'Wrap, studio out')]]);
-    s.checklist = ck([T('Бриф от бренда', 'Brief from the brand'), T('Мудборд согласован', 'Moodboard approved'), T('Смета согласована', 'Budget approved'), T('Студия забронирована', 'Studio booked'), T('Модели подтвердили', 'Models confirmed'), T('Вещи у стилиста', 'Clothes with the stylist'), T('Права на фото и срок — договорились', 'Usage rights and term agreed'), T('Договор или акт', 'Contract or invoice')]);
-    const BL = (sec, label, unit, pay) => ({ id: uid(), sec, label, desc: '', qty: '1', unit: unit || 'смена', rate: '', pay: pay || 'money', barter: '', q: false, mid: '' });
-    s.budget.lines = [BL('team', T('Фотограф', 'Photographer'), 'час'), BL('team', T('Видеограф', 'Videographer'), 'час'), BL('team', T('Стилист', 'Stylist')), BL('team', T('Визажист', 'Make-up')), BL('team', T('Волосы', 'Hair')), BL('team', T('Продюсирование', 'Production'), 'проект'), BL('models', T('Модели', 'Models'), 'чел'), BL('looks', T('Закуп образов с возвратом', 'Refundable wardrobe purchase'), 'сумма', 'refund'), BL('looks', T('Невозвратные расходы на образы', 'Non-refundable wardrobe costs'), 'сумма'), BL('place', T('Студия / локация', 'Studio / location'), 'час'), BL('place', T('Свет и техника', 'Light and gear'), 'сумма'), BL('food', T('Еда на площадку', 'Catering'), 'сумма'), BL('food', T('Такси и логистика', 'Taxi and transport'), 'сумма'), BL('post', T('Ретушь', 'Retouching'), 'шт')];
-    s.budget.reserve = '10'; s.budget.v2 = true;
-    s.retouch = T('40 кадров · 2 круга правок', '40 frames · 2 rounds');
-  } else if (kind === 'personal') {
-    s.call = '11:00'; s.end = '14:00';
-    s._tpl = tl([['11:00', T('Мейк и волосы', 'Make-up and hair')], ['12:00', T('Съёмка', 'Shooting')], ['14:00', T('Конец', 'Wrap')]]);
-    s.checklist = ck([T('Предоплата получена', 'Deposit received'), T('Клиенту отправлена памятка «как подготовиться»', 'Prep guide sent to the client'), T('Образы обсудили', 'Outfits discussed'), T('Студия или место', 'Studio or location'), T('Сколько фото и когда — договорились', 'Number of photos and delivery agreed')]);
-    s.deliver = T('через 7 дней', 'in 7 days');
-  } else if (kind === 'creative') {
-    s.call = '12:00'; s.end = '16:00'; s.client = 'TFP';
-    s._tpl = tl([['12:00', T('Сбор', 'Call')], ['12:30', T('Мейк', 'Make-up')], ['13:30', T('Съёмка', 'Shooting')], ['16:00', T('Конец', 'Wrap')]]);
-    s.checklist = ck([T('Мудборд на 5–6 кадров', 'Moodboard of 5–6 images'), T('Договорились, кто где публикует и отмечает', 'Agreed who posts where and credits'), T('Похожий уровень команды', 'Similar level across the team'), T('Аренду делим поровну', 'Studio cost split'), T('Когда отдаём кадры', 'When we share the photos')]);
-  }
-  s._tplCall = s.call;
   Object.assign(s, o);
   return s;
 }
@@ -659,8 +638,8 @@ function vNew() {
     h += '<div class="card tight">' + [['mood', T('Мудборд', 'Moodboard')], ['timing', T('Тайминг', 'Schedule')], ['team', T('Команда', 'Team')], ['looks', T('Образы', 'Looks')], ['budget', T('Смета', 'Budget')], ['print', T('Распечатка', 'Print sheet')]].map(([k, l]) => sw(l, '', m[k], 'toggleNewMod', k)).join('') + '</div>';
   }
   if (n) {
-    h += '<div class="card"><div class="grid2">' + field(n === 'personal' ? T('Клиент', 'Client') : n === 'creative' ? T('Название', 'Title') : T('Бренд / клиент', 'Brand / client'), '<input class="inp" id="nfClient" placeholder="' + (n === 'personal' ? T('Анна К.', 'Anna K.') : n === 'creative' ? 'TFP' : T('Марта', 'Brand')) + '" value="' + (n === 'creative' ? 'TFP' : '') + '">') + field(T('Что снимаем', 'What'), '<input class="inp" id="nfWhat" placeholder="' + (n === 'personal' ? T('портрет', 'portrait') : T('лукбук', 'lookbook')) + '">') + '</div>' +
-      '<div class="grid2">' + field(T('Дата', 'Date'), '<input class="inp" type="date" id="nfDate">') + field(T('Сбор', 'Call time'), '<input class="inp mono" type="time" data-time="1" id="nfCall" value="' + ({ brand: '09:00', personal: '11:00', creative: '12:00' }[n] || '10:00') + '">') + '</div></div>';
+    h += '<div class="card"><div class="grid2">' + field(n === 'personal' ? T('Клиент', 'Client') : n === 'creative' ? T('Название', 'Title') : T('Бренд / клиент', 'Brand / client'), '<input class="inp" id="nfClient" placeholder="' + (n === 'personal' ? T('Анна К.', 'Anna K.') : n === 'creative' ? 'TFP' : T('Марта', 'Brand')) + '">') + field(T('Что снимаем', 'What'), '<input class="inp" id="nfWhat" placeholder="' + (n === 'personal' ? T('портрет', 'portrait') : T('лукбук', 'lookbook')) + '">') + '</div>' +
+      '<div class="grid2">' + field(T('Дата', 'Date'), '<input class="inp" type="date" id="nfDate">') + field(T('Сбор', 'Call time'), '<input class="inp mono" type="time" data-time="1" id="nfCall" value="">') + '</div></div>';
   }
   h += '</div><div class="cta nonav"><button class="btn big" data-a="createShoot"' + (n ? '' : ' disabled') + '>' + (n ? T('Создать', 'Create') : T('Выбери формат', 'Pick a format')) + '</button></div>';
   return h;
@@ -709,7 +688,7 @@ function pMain(s) {
     const dn = s.checklist.filter((c) => c.done).length;
     h += '<div class="row between pad4"><h3>' + T('Подготовка', 'Prep') + '</h3><span class="small muted mono">' + dn + '/' + s.checklist.length + '</span></div><div class="card tight">';
     s.checklist.forEach((c) => { h += '<div class="li"><button class="check ' + (c.done ? 'on' : '') + '" data-a="toggleCheck" data-s="' + s.id + '" data-x="' + c.id + '" aria-label="' + esc(c.text) + '" aria-pressed="' + c.done + '">' + (c.done ? '✓' : '') + '</button><span class="grow ' + (c.done ? 'strike' : '') + '">' + esc(c.text) + '</span><button class="textbtn" data-a="delRow" data-s="' + s.id + '" data-x="checklist|' + c.id + '" aria-label="' + T('Удалить', 'Delete') + '">' + I.x.replace('<svg', '<svg width="16" height="16"') + '</button></div>'; });
-    h += '<div class="li"><input class="inp" id="newCheck" placeholder="' + T('+ Своё дело', '+ Add a task') + '" style="background:transparent;padding:0" data-enter="addCheck" data-s="' + s.id + '"><button class="btn sm soft" data-a="addCheck" data-s="' + s.id + '">' + T('Добавить', 'Add') + '</button></div></div>';
+    h += '<div class="li"><input class="inp" id="newCheck" placeholder="' + T('+ Что подготовить', '+ Add a task') + '" style="background:transparent;padding:0" data-enter="addCheck" data-s="' + s.id + '"><button class="btn sm soft" data-a="addCheck" data-s="' + s.id + '">' + T('Добавить', 'Add') + '</button></div></div>';
   }
   if (s.kind === 'brand' || s.kind === 'personal') {
     h += '<div class="card glow-sky"><h3>' + T('Договорились', 'Agreed') + '</h3>' + (s.kind === 'brand' ? field(T('Права на фото', 'Usage rights'), inp(b + '.rights', s.rights, { ph: T('1 год · онлайн · Россия', '1 year · online') })) : '') + field(T('Ретушь', 'Retouching'), inp(b + '.retouch', s.retouch, { ph: T('сколько кадров, сколько кругов правок', 'frames, rounds of edits') })) + field(T('Сдача кадров', 'Delivery'), inp(b + '.deliver', s.deliver, { ph: T('дата или срок', 'date or term') })) + '</div>';
@@ -721,7 +700,7 @@ function pMain(s) {
 function pTiming(s) {
   const b = 'shoot:' + s.id;
   let h = '';
-  if (!s.timing.length) { const pv = genTiming(s); h += '<div class="card glow-sky"><h3>' + T('Нужна заготовка?', 'Want a starting point?') + '</h3><span class="small">' + T('Каркас под твоё время: ' + esc(s.call) + '–' + esc(s.end) + '. Подставь и допиши детали — или пиши с нуля.', 'A frame for your hours: ' + esc(s.call) + '–' + esc(s.end) + '. Use it and add details, or start from scratch.') + '</span><div class="col" style="gap:2px">' + pv.map((x) => '<span class="small"><b class="mono">' + esc(x.t) + (x.t2 ? '–' + esc(x.t2) : '') + '</b> ' + esc(x.w) + '</span>').join('') + '</div><button class="btn sm" data-a="useTemplate" data-s="' + s.id + '">' + T('Подставить заготовку', 'Use this') + '</button></div>'; }
+  if (!s.timing.length) h += '<div class="empty">' + T('Тайминг пустой. Добавь первую строку — время и что происходит.', 'No schedule yet. Add the first line — time and what happens.') + '</div>';
   h += '<div class="row between pad4"><span class="small muted">' + T('Длительность', 'Duration') + ': <b class="mono">' + (durationH(s) ? durationH(s).toFixed(1).replace('.0', '') + T(' ч', 'h') : '—') + '</b></span>' + (durationH(s) > 5 && !hasMeal(s) ? '<span class="badge warn">' + T('нужен обед', 'add lunch') + '</span>' : '') + '</div>';
   h += '<div class="card tight">';
   const rows = sortedTiming(s);
@@ -1301,7 +1280,7 @@ const A = {
   createShoot: () => {
     const k = ui.newKind; if (!k) return;
     const s = newShoot(k, { client: $('#nfClient')?.value.trim() || '', what: $('#nfWhat')?.value.trim() || '', date: $('#nfDate')?.value || '' });
-    const call = normTime($('#nfCall')?.value); if (call) { const shift = mins(call) - mins(s.call); const e = mins(s.end); if (e != null && shift) { const n = (((e + shift) % 1440) + 1440) % 1440; s.end = pad(Math.floor(n / 60)) + ':' + pad(n % 60); } s.call = call; }
+    const call = normTime($('#nfCall')?.value); if (call) s.call = call;
     if (k === 'custom' && ui.newMods) s.modules = { ...ui.newMods };
     if (!isPro()) S.freeUsed = true;
     S.shoots.push(s); save(); ui.newKind = null; ui.newMods = null; location.hash = '#/p/' + s.id;
@@ -1313,7 +1292,7 @@ const A = {
   useTemplate: (el) => { const s = getShoot(el.dataset.s); s.timing = genTiming(s); save(); render(); },
   tlToggle: (el) => { ui.tlOpen = ui.tlOpen === el.dataset.x ? null : el.dataset.x; render(); },
   clearTiming: (el) => { if (!confirm(T('Удалить все строки тайминга?', 'Clear the whole schedule?'))) return; const s = getShoot(el.dataset.s); s.timing = []; save(); render(); },
-  addTiming: (el) => { const s = getShoot(el.dataset.s); const all = sortedTiming(s); const last = all[all.length - 1]; const m = last && mins(last.t) != null ? mins(last.t) + 30 : mins(s.call) ?? 600; s.timing.push({ id: uid(), t: pad(Math.floor(m / 60) % 24) + ':' + pad(m % 60), w: '' }); save(); render(); },
+  addTiming: (el) => { const s = getShoot(el.dataset.s); const all = sortedTiming(s); const last = all[all.length - 1]; s.timing.push({ id: uid(), t: last && last.t2 ? last.t2 : '', w: '' }); save(); render(); },
   addLunch: (el) => { const s = getShoot(el.dataset.s); const a = mins(s.call) ?? 600; const d = durationH(s) * 60 || 480; const m = (Math.round((a + d / 2) / 30) * 30) % 1440; s.timing.push({ id: uid(), t: pad(Math.floor(m / 60)) + ':' + pad(m % 60), w: T('Обед для команды', 'Team lunch') }); const f = teamFood(s); save(); toast(T('Обед добавлен в тайминг', 'Lunch added') + (f ? ' · ' + f : '')); render(); },
   tab: (el) => { location.hash = '#/p/' + el.dataset.s + '/' + (el.dataset.x || 'main'); },
   shareTeam: async (el) => { const s = getShoot(el.dataset.s); const link = await shareLink(s, ''); shareSheet(T('Команде', 'To the team'), teamText(s) + '\n\n' + T('Проект целиком — сохрани в SET, там всегда свежая версия:', 'The whole project — save it in SET:') + '\n' + link); },
@@ -1428,7 +1407,7 @@ const A = {
   deleteShoot: () => { if (!confirm(T('Удалить съёмку целиком?', 'Delete this shoot?'))) return; S.shoots = S.shoots.filter((x) => x.id !== ui.sheet.s); ui.sheet = null; save(); location.hash = '#/projects'; },
   calMove: (el) => { const c = ui.cal; c.m += Number(el.dataset.x); if (c.m < 0) { c.m = 11; c.y--; } if (c.m > 11) { c.m = 0; c.y++; } ui.calSel = null; render(); },
   calPick: (el) => { ui.calSel = el.dataset.x && ui.calSel !== el.dataset.x ? el.dataset.x : null; render(); },
-  ownSheet: (el) => { const s = newShoot('custom', { src: 'own', date: el.dataset.x || todayIso(), call: '10:00', end: '', modules: { team: false, timing: false, looks: false, budget: false, print: false } }); s.my.fee = ''; ui.sheet = { type: 'own', data: s, isNew: true }; render(); },
+  ownSheet: (el) => { const s = newShoot('custom', { src: 'own', date: el.dataset.x || todayIso(), call: '', end: '', modules: { team: false, timing: false, looks: false, budget: false, print: false } }); s.my.fee = ''; ui.sheet = { type: 'own', data: s, isNew: true }; render(); },
   editIncome: (el) => { const s = getShoot(el.dataset.x); ui.sheet = { type: s.src === 'own' ? 'own' : 'income', data: JSON.parse(JSON.stringify(s)), isNew: false }; render(); },
   sheetShift: (el) => { const d = ui.sheet.data; d.my.shifts = Math.max(1, (Number(d.my.shifts) || 1) + Number(el.dataset.x)); $('#oShifts').textContent = d.my.shifts; },
   sheetPay: (el) => { keepOwnInputs(); ui.sheet.data.my.pay = el.dataset.x; render(); },
@@ -1536,12 +1515,20 @@ function loadDemo() {
   const b = newShoot('brand', { client: T('Марта', 'Marta'), what: T('лукбук', 'lookbook'), date: dIso(3), place: T('Студия Свет', 'Studio Light'), address: T('ул. Пушкина, 12, 3 этаж, зал «Белый»', '12 Pushkin St, 3rd floor') });
   b.team = [M(ola, '09:00', '25000', 'yes'), M(karina, '08:45', '12000', 'yes'), M(mila, '09:15', '15000', 'asked'), M(sasha, '10:30', '15000', ''), M(lena, '08:30', '12000', 'yes'), M(dima, '08:30', '8000', 'yes')];
   b.looks = [[T('Нежный беж', 'Soft beige'), mila.name, T('льняной костюм, лоферы', 'linen suit, loafers')], [T('Город', 'City'), sasha.name, T('тренч, джинсы', 'trench, jeans')], [T('Вечер', 'Evening'), mila.name, T('шёлковое платье', 'silk dress')], [T('Выходной', 'Weekend'), sasha.name, T('трикотаж, кеды', 'knitwear, sneakers')]].map((x) => ({ id: uid(), name: x[0], model: x[1], clothes: x[2], makeup: T('нюд', 'nude'), hair: T('гладкий пучок', 'sleek bun'), mua: karina.name, ref: '', done: false }));
+  const ck = (arr) => arr.map((text) => ({ id: uid(), text, done: false }));
+  const BL = (sec, label, unit, pay) => ({ id: uid(), sec, label, desc: '', qty: '1', unit: unit || 'смена', rate: '', pay: pay || 'money', barter: '', q: false, mid: '' });
+  b.call = '09:00'; b.end = '19:00';
+  b.checklist = ck([T('Бриф от бренда', 'Brief from the brand'), T('Мудборд согласован', 'Moodboard approved'), T('Смета согласована', 'Budget approved'), T('Студия забронирована', 'Studio booked'), T('Модели подтвердили', 'Models confirmed'), T('Вещи у стилиста', 'Clothes with the stylist'), T('Права на фото и срок — договорились', 'Usage rights and term agreed'), T('Договор или акт', 'Contract or invoice')]);
+  b.budget.lines = [BL('team', T('Фотограф', 'Photographer'), 'час'), BL('team', T('Видеограф', 'Videographer'), 'час'), BL('team', T('Стилист', 'Stylist')), BL('team', T('Визажист', 'Make-up')), BL('team', T('Волосы', 'Hair')), BL('team', T('Продюсирование', 'Production'), 'проект'), BL('models', T('Модели', 'Models'), 'чел'), BL('looks', T('Закуп образов с возвратом', 'Refundable wardrobe purchase'), 'сумма', 'refund'), BL('looks', T('Невозвратные расходы на образы', 'Non-refundable wardrobe costs'), 'сумма'), BL('place', T('Студия / локация', 'Studio / location'), 'час'), BL('place', T('Свет и техника', 'Light and gear'), 'сумма'), BL('food', T('Еда на площадку', 'Catering'), 'сумма'), BL('food', T('Такси и логистика', 'Taxi and transport'), 'сумма'), BL('post', T('Ретушь', 'Retouching'), 'шт')];
+  b.retouch = T('40 кадров · 2 круга правок', '40 frames · 2 rounds');
   b.checklist.slice(0, 4).forEach((c) => { c.done = true; });
   b.budget.lines.forEach((x, i) => { x.rate = String([6000, 5000, 12000, 8000, 6000, 35000, 15000, 40000, 8000, 3000, 6000, 6000, 3000, 500][i] || ''); x.qty = String([4, 2, 1, 1, 1, 1, 2, 1, 1, 6, 1, 1, 1, 30][i] || 1); }); b.budget.lines[2].pay = 'barter'; b.budget.lines[2].barter = '15000'; b.budget.lines[2].rate = '';
   b.rights = T('1 год · онлайн · Россия', '1 year · online'); b.my.fee = '35000'; b.my.role = 'producer';
   const pe = newShoot('personal', { client: T('Анна К.', 'Anna K.'), what: T('портрет', 'portrait'), date: dIso(7), place: T('Студия Свет', 'Studio Light'), address: T('ул. Пушкина, 12', '12 Pushkin St') });
   pe.team = [M(ola, '11:00', '10000', 'yes'), M(karina, '10:30', '5000', 'asked')]; pe.my.fee = '12000';
-  const cr = newShoot('creative', { what: T('шёлк', 'silk'), date: dIso(14) }); cr.team = [M(ola, '12:00', '', 'yes'), M(mila, '12:00', '', 'yes')]; cr.my.fee = '0'; cr.my.role = 'model';
+  pe.call = '11:00'; pe.end = '14:00'; pe.deliver = T('через 7 дней', 'in 7 days');
+  pe.checklist = ck([T('Предоплата получена', 'Deposit received'), T('Клиенту отправлена памятка «как подготовиться»', 'Prep guide sent to the client'), T('Образы обсудили', 'Outfits discussed')]);
+  const cr = newShoot('creative', { what: T('шёлк', 'silk'), date: dIso(14) }); cr.team = [M(ola, '12:00', '', 'yes'), M(mila, '12:00', '', 'yes')]; cr.my.fee = '0'; cr.my.role = 'model'; cr.call = '12:00'; cr.end = '16:00'; cr.client = 'TFP';
   const past1 = newShoot('brand', { client: T('Кофейня Зерно', 'Grain Café'), what: T('меню', 'menu'), date: dIso(-5), status: 'done' }); past1.my = { role: 'producer', fee: '25000', shifts: 1, paid: true, check: true, note: '' };
   const past2 = newShoot('custom', { src: 'own', client: T('Шоурум Лён', 'Linen showroom'), what: T('лукбук', 'lookbook'), date: dIso(-12), modules: { team: false, timing: false, looks: false, budget: false, print: false } }); past2.my = { role: 'model', fee: '15000', shifts: 1, paid: false, check: false, note: '' };
   const past3 = newShoot('custom', { src: 'own', client: T('Каталог Дом и сад', 'Home & Garden'), what: T('каталог', 'catalogue'), date: dIso(-30), modules: { team: false, timing: false, looks: false, budget: false, print: false } }); past3.my = { role: 'producer', fee: '40000', shifts: 2, paid: true, check: false, note: '' };
