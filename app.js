@@ -1,6 +1,6 @@
 'use strict';
 /* SET — beta. All data lives on this device (localStorage). */
-const VERSION = '0.15.1 beta';
+const VERSION = '0.15.2 beta';
 const APP_URL = (location.host + location.pathname).replace(/index\.html$/, '').replace(/\/$/, '');
 const KEY = 'set.v1';
 
@@ -431,7 +431,7 @@ function vPro() {
     (SUB.payUrl ? '<a class="btn" href="' + esc(SUB.payUrl) + '" target="_blank" rel="noopener">' + T('Открыть оплату в банке', 'Open payment in your bank') + '</a>' : '<span class="small muted">' + T('Ссылка на оплату скоро появится', 'Payment link coming soon') + '</span>') +
     '<span class="tiny muted">' + T('Картой любого российского банка через приложение банка. Сумма — ', 'Any Russian bank card via your bank app. Amount: ') + money(SUB.price) + ' ₽</span></div>';
   h += '<div class="card"><h3>' + T('2. Напиши мне', '2. Message me') + '</h3><span class="small">' + T('Пришли скриншот оплаты и свой код:', 'Send the payment screenshot and your code:') + '</span><button class="btn soft mono" data-a="copyText" data-x="' + esc(S.deviceId) + '" style="font-size:22px;letter-spacing:0.08em">' + esc(S.deviceId) + '</button>' +
-    field(T('Твой номер телефона', 'Your phone number'), phoneInp({ b: 'profile.phone' }, S.profile.phone)) + '<span class="tiny muted pad4" style="margin-top:-10px">' + PHONE_HINT() + '</span>' +
+    field(T('Твой номер телефона', 'Your phone number'), phoneInp({ b: 'profile.phone' }, S.profile.phone)) +
     (!SUB.tg && !SUB.wa ? '<span class="small muted">' + T('Контакт для оплаты скоро появится.', 'Payment contact coming soon.') + '</span>' : '') + '<div class="grid2">' + (SUB.tg ? '<a class="btn" href="https://t.me/' + esc(SUB.tg) + '" target="_blank" rel="noopener">Telegram</a>' : '') + (SUB.wa ? '<a class="btn" href="https://wa.me/' + esc(SUB.wa) + '?text=' + encodeURIComponent(msg) + '" target="_blank" rel="noopener">WhatsApp</a>' : '') + '</div></div>';
   h += '<div class="card"><h3>' + T('3. Нажми ссылку из ответа', '3. Tap the link I send back') + '</h3><span class="small muted">' + T('Подписка включится на этом телефоне.', 'The subscription turns on for this phone.') + '</span><input class="inp mono" id="actCode" placeholder="' + T('или вставь код активации сюда', 'or paste the activation code') + '"><button class="btn soft" data-a="activateManual">' + T('Активировать', 'Activate') + '</button></div>';
   h += '<span class="tiny muted pad4">' + T('Съёмки, люди и доход остаются у тебя и без подписки — без неё нельзя только создавать новые проекты.', 'Without a subscription you keep all your data — you just can’t create new projects.') + '</span></div>' + nav('');
@@ -558,7 +558,7 @@ function vWelcome() {
     h += '<div class="chips">' + chip('Русский', S.lang === 'ru', 'lang', 'ru', 'sm') + chip('English', S.lang === 'en', 'lang', 'en', 'sm') + '</div>';
     h += '<h1>' + T('Давай<br>знакомиться', 'Nice to<br>meet you') + '</h1><p class="muted" style="margin:0">' + T('Заполнишь один раз — дальше всё подставится само', 'Fill this in once — the rest fills itself in') + '</p>';
     h += '<div class="grid2">' + field(T('Имя', 'Name'), inp('profile.name', p.name, { ph: T('Как к тебе обращаться', 'Your name') })) + field(T('Город', 'City'), inp('profile.city', p.city, { ph: T('Твой город', 'City') })) + '</div>';
-    h += field(T('Номер телефона', 'Phone number'), phoneInp({ b: 'profile.phone' }, p.phone)) + '<span class="tiny muted pad4" style="margin-top:-10px">' + PHONE_HINT() + ' ' + T('Нужен, чтобы подключить подписку и чтобы команда могла с тобой связаться.', 'Needed for the subscription and so the team can reach you.') + '</span>' +
+    h += field(T('Номер телефона', 'Phone number'), phoneInp({ b: 'profile.phone' }, p.phone)) + '<span class="tiny muted pad4" style="margin-top:-10px">' + T('Нужен, чтобы подключить подписку и чтобы команда могла с тобой связаться.', 'Needed for the subscription and so the team can reach you.') + '</span>' +
       field(T('Ник в Telegram', 'Telegram username'), '<input class="inp" data-b="profile.tg" data-tg="1" autocapitalize="off" autocorrect="off" value="' + esc(p.tg || '') + '" placeholder="@nick">');
     h += '<h2 style="margin-top:6px">' + T('Кто ты на съёмке?', 'What do you do on set?') + '</h2><span class="small muted pad4">' + T('Можно несколько', 'Pick as many as you like') + '</span>';
     ui.moreG = ui.moreG || {};
