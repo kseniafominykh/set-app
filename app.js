@@ -1,6 +1,6 @@
 'use strict';
 /* SET — beta. All data lives on this device (localStorage). */
-const VERSION = '0.15.2 beta';
+const VERSION = '0.15.3 beta';
 const APP_URL = (location.host + location.pathname).replace(/index\.html$/, '').replace(/\/$/, '');
 const KEY = 'set.v1';
 
@@ -558,7 +558,7 @@ function vWelcome() {
     h += '<div class="chips">' + chip('Русский', S.lang === 'ru', 'lang', 'ru', 'sm') + chip('English', S.lang === 'en', 'lang', 'en', 'sm') + '</div>';
     h += '<h1>' + T('Давай<br>знакомиться', 'Nice to<br>meet you') + '</h1><p class="muted" style="margin:0">' + T('Заполнишь один раз — дальше всё подставится само', 'Fill this in once — the rest fills itself in') + '</p>';
     h += '<div class="grid2">' + field(T('Имя', 'Name'), inp('profile.name', p.name, { ph: T('Как к тебе обращаться', 'Your name') })) + field(T('Город', 'City'), inp('profile.city', p.city, { ph: T('Твой город', 'City') })) + '</div>';
-    h += field(T('Номер телефона', 'Phone number'), phoneInp({ b: 'profile.phone' }, p.phone)) + '<span class="tiny muted pad4" style="margin-top:-10px">' + T('Нужен, чтобы подключить подписку и чтобы команда могла с тобой связаться.', 'Needed for the subscription and so the team can reach you.') + '</span>' +
+    h += field(T('Номер телефона', 'Phone number'), phoneInp({ b: 'profile.phone' }, p.phone)) + '<span class="tiny muted pad4" style="margin-top:-10px">' + T('Чтобы команда могла с тобой связаться.', 'So the team can reach you.') + '</span>' +
       field(T('Ник в Telegram', 'Telegram username'), '<input class="inp" data-b="profile.tg" data-tg="1" autocapitalize="off" autocorrect="off" value="' + esc(p.tg || '') + '" placeholder="@nick">');
     h += '<h2 style="margin-top:6px">' + T('Кто ты на съёмке?', 'What do you do on set?') + '</h2><span class="small muted pad4">' + T('Можно несколько', 'Pick as many as you like') + '</span>';
     ui.moreG = ui.moreG || {};
