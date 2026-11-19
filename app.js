@@ -1,6 +1,6 @@
 'use strict';
 /* SET — beta. All data lives on this device (localStorage). */
-const VERSION = '0.15.0 beta';
+const VERSION = '0.15.1 beta';
 const APP_URL = (location.host + location.pathname).replace(/index\.html$/, '').replace(/\/$/, '');
 const KEY = 'set.v1';
 
@@ -57,9 +57,46 @@ function save() {
     catch (e) { toast(T('Не получилось сохранить: память телефона заполнена', 'Could not save: storage is full')); }
   }, 120);
 }
-function fmtPhone(v) { const raw = String(v || '').trim(); let d = raw.replace(/\D/g, ''); if (!d) return ''; if (d.length === 11 && (d[0] === '8' || d[0] === '7')) d = d.slice(1); else if (d.length !== 10) return raw; return '+7 ' + d.slice(0, 3) + ' ' + d.slice(3, 6) + '-' + d.slice(6, 8) + '-' + d.slice(8, 10); }
+const CC = [['7', 'Россия, Казахстан', 'Russia, Kazakhstan', '🇷🇺'], ['375', 'Беларусь', 'Belarus', '🇧🇾'], ['374', 'Армения', 'Armenia', '🇦🇲'], ['994', 'Азербайджан', 'Azerbaijan', '🇦🇿'], ['995', 'Грузия', 'Georgia', '🇬🇪'], ['996', 'Кыргызстан', 'Kyrgyzstan', '🇰🇬'], ['998', 'Узбекистан', 'Uzbekistan', '🇺🇿'], ['992', 'Таджикистан', 'Tajikistan', '🇹🇯'], ['993', 'Туркменистан', 'Turkmenistan', '🇹🇲'], ['373', 'Молдова', 'Moldova', '🇲🇩'], ['90', 'Турция', 'Turkey', '🇹🇷'], ['971', 'ОАЭ', 'UAE', '🇦🇪'], ['381', 'Сербия', 'Serbia', '🇷🇸'], ['382', 'Черногория', 'Montenegro', '🇲🇪'], ['972', 'Израиль', 'Israel', '🇮🇱'], ['66', 'Таиланд', 'Thailand', '🇹🇭'], ['62', 'Индонезия', 'Indonesia', '🇮🇩'], ['49', 'Германия', 'Germany', '🇩🇪'], ['33', 'Франция', 'France', '🇫🇷'], ['39', 'Италия', 'Italy', '🇮🇹'], ['34', 'Испания', 'Spain', '🇪🇸'], ['44', 'Великобритания', 'UK', '🇬🇧'], ['1', 'США, Канада', 'USA, Canada', '🇺🇸']];
+function splitPhone(v) {
+  const raw = String(v || '').trim(); const d = raw.replace(/\D/g, '');
+  if (!d) return ['7', ''];
+  if (raw.startsWith('+')) { const c = CC.map((x) => x[0]).sort((a, b) => b.length - a.length).find((c) => d.startsWith(c)); if (c) return [c, d.slice(c.length)]; }
+  if (d.length === 11 && (d[0] === '8' || d[0] === '7')) return ['7', d.slice(1)];
+  return ['7', d];
+}
+function fmtNat(cc, d) {
+  d = String(d || '').replace(/\D/g, '');
+  if (cc === '7') { if (d.length === 11 && (d[0] === '8' || d[0] === '7')) d = d.slice(1); d = d.slice(0, 10); return d.slice(0, 3) + (d.length > 3 ? ' ' + d.slice(3, 6) : '') + (d.length > 6 ? '-' + d.slice(6, 8) : '') + (d.length > 8 ? '-' + d.slice(8, 10) : ''); }
+  d = d.slice(0, 12);
+  if (d.length === 9) return d.slice(0, 2) + ' ' + d.slice(2, 5) + '-' + d.slice(5, 7) + '-' + d.slice(7);
+  if (d.length === 8) return d.slice(0, 2) + ' ' + d.slice(2, 5) + '-' + d.slice(5);
+  return d.replace(/(\d{3})(?=\d{2})/g, '$1 ');
+}
+const joinPhone = (cc, nat) => { const n = fmtNat(cc, nat); return n ? '+' + cc + ' ' + n : ''; };
+function fmtPhone(v) { const [cc, nat] = splitPhone(v); return joinPhone(cc, nat); }
+// country code + number; the full number lives in the hidden input (data-b or id)
+function phoneInp(o, value) {
+  const [cc, nat] = splitPhone(value); const key = o.b || o.id;
+  const c0 = CC.find((c) => c[0] === cc) || CC[0];
+  return '<div class="phone-row"><div class="cc-wrap"><span class="inp cc-face" aria-hidden="true">' + c0[3] + ' +' + c0[0] + '</span><select class="cc" data-ph="' + esc(key) + '" aria-label="' + T('Код страны', 'Country code') + '">' + CC.map((c) => '<option value="' + c[0] + '"' + (c[0] === cc ? ' selected' : '') + '>' + c[3] + ' +' + c[0] + ' · ' + esc(L() === 'en' ? c[2] : c[1]) + '</option>').join('') + '</select></div>' +
+    '<input class="inp" type="tel" inputmode="tel" autocomplete="tel-national" data-ph="' + esc(key) + '" value="' + esc(fmtNat(cc, nat)) + '" placeholder="' + (cc === '7' ? '900 000-00-00' : '') + '" aria-label="' + T('Номер телефона', 'Phone number') + '">' +
+    '<input type="hidden" ' + (o.b ? 'data-b="' + esc(o.b) + '"' : 'id="' + esc(o.id) + '"') + ' data-phv="' + esc(key) + '" value="' + esc(value ? fmtPhone(value) : '') + '"></div>';
+}
+function syncPhone(el, final) {
+  const row = el.closest('.phone-row'); if (!row) return;
+  const sel = row.querySelector('select'); const tel = row.querySelector('input[type=tel]'); const hid = row.querySelector('input[type=hidden]');
+  let cc = sel.value; let d = tel.value.replace(/\D/g, '');
+  if (el === tel && tel.value.trim().startsWith('+')) { const sp = splitPhone(tel.value); cc = sp[0]; d = sp[1]; sel.value = cc; }
+  if (cc === '7' && d.length === 11 && (d[0] === '8' || d[0] === '7')) d = d.slice(1);
+  const full = joinPhone(cc, d); hid.value = full;
+  if (final || el === sel) tel.value = fmtNat(cc, d);
+  tel.placeholder = cc === '7' ? '900 000-00-00' : '';
+  const c0 = CC.find((c) => c[0] === cc); const face = row.querySelector('.cc-face'); if (face && c0) face.textContent = c0[3] + ' +' + c0[0];
+  if (hid.dataset.b) setPath(hid.dataset.b, full);
+}
 function tgNick(v) { const s = String(v || '').trim().replace(/^https?:\/\/(t\.me|telegram\.me)\//i, '').replace(/^@+/, '').replace(/[^\w]/g, ''); return s ? '@' + s : ''; }
-const PHONE_HINT = () => T('Любой формат: 8 900…, +7 900… или 900… — приведём к одному виду.', 'Any format works — we tidy it up.');
+const PHONE_HINT = () => T('Выбери страну и введи номер без кода — приведём к одному виду.', 'Pick the country and type the number without the code.');
 const T = (ru, en) => (S.lang === 'en' ? (en ?? ru) : ru);
 
 /* ---------- dictionaries ---------- */
@@ -394,7 +431,7 @@ function vPro() {
     (SUB.payUrl ? '<a class="btn" href="' + esc(SUB.payUrl) + '" target="_blank" rel="noopener">' + T('Открыть оплату в банке', 'Open payment in your bank') + '</a>' : '<span class="small muted">' + T('Ссылка на оплату скоро появится', 'Payment link coming soon') + '</span>') +
     '<span class="tiny muted">' + T('Картой любого российского банка через приложение банка. Сумма — ', 'Any Russian bank card via your bank app. Amount: ') + money(SUB.price) + ' ₽</span></div>';
   h += '<div class="card"><h3>' + T('2. Напиши мне', '2. Message me') + '</h3><span class="small">' + T('Пришли скриншот оплаты и свой код:', 'Send the payment screenshot and your code:') + '</span><button class="btn soft mono" data-a="copyText" data-x="' + esc(S.deviceId) + '" style="font-size:22px;letter-spacing:0.08em">' + esc(S.deviceId) + '</button>' +
-    field(T('Твой номер телефона', 'Your phone number'), '<input class="inp" type="tel" inputmode="tel" autocomplete="tel" data-b="profile.phone" value="' + esc(S.profile.phone || '') + '" placeholder="+7 900 000-00-00">') + '<span class="tiny muted pad4" style="margin-top:-10px">' + PHONE_HINT() + '</span>' +
+    field(T('Твой номер телефона', 'Your phone number'), phoneInp({ b: 'profile.phone' }, S.profile.phone)) + '<span class="tiny muted pad4" style="margin-top:-10px">' + PHONE_HINT() + '</span>' +
     (!SUB.tg && !SUB.wa ? '<span class="small muted">' + T('Контакт для оплаты скоро появится.', 'Payment contact coming soon.') + '</span>' : '') + '<div class="grid2">' + (SUB.tg ? '<a class="btn" href="https://t.me/' + esc(SUB.tg) + '" target="_blank" rel="noopener">Telegram</a>' : '') + (SUB.wa ? '<a class="btn" href="https://wa.me/' + esc(SUB.wa) + '?text=' + encodeURIComponent(msg) + '" target="_blank" rel="noopener">WhatsApp</a>' : '') + '</div></div>';
   h += '<div class="card"><h3>' + T('3. Нажми ссылку из ответа', '3. Tap the link I send back') + '</h3><span class="small muted">' + T('Подписка включится на этом телефоне.', 'The subscription turns on for this phone.') + '</span><input class="inp mono" id="actCode" placeholder="' + T('или вставь код активации сюда', 'or paste the activation code') + '"><button class="btn soft" data-a="activateManual">' + T('Активировать', 'Activate') + '</button></div>';
   h += '<span class="tiny muted pad4">' + T('Съёмки, люди и доход остаются у тебя и без подписки — без неё нельзя только создавать новые проекты.', 'Without a subscription you keep all your data — you just can’t create new projects.') + '</span></div>' + nav('');
@@ -412,7 +449,7 @@ const TIPS = {
   today: ['Это главный экран: ближайшая съёмка и что важно сделать сейчас. «+» внизу — новая съёмка, аватар — твой профиль и доход.', 'Your home screen: the next shoot and what matters now. “+” below starts a new shoot; the avatar opens your profile and income.'],
   new: ['Выбери формат — от него зависят подсказки и разделы. Потом всё можно поменять.', 'Pick a format — it shapes hints and sections. You can change everything later.'],
   project: ['Здесь главное: дата, место, подготовка. Вкладки сверху — мудборд, тайминг, команда, образы, смета. «Отправить команде» собирает всё в одно сообщение.', 'The essentials: date, venue, prep. Tabs above: moodboard, schedule, team, looks, budget. “Send to the team” packs it all into one message.'],
-  mood: ['Добавь фото с телефона и ссылки на Pinterest. Команде мудборд уходит одной картинкой А4 — её же можно распечатать.', 'Add photos and Pinterest links. The team gets them in one go.'],
+  mood: ['Добавь фото с телефона — команда получит мудборд одной картинкой А4, её же можно распечатать.', 'Add photos from your phone — the team gets the moodboard as one A4 image you can also print.'],
   timing: ['Нажми «⋯» у строки — добавишь «до», «кто» и что идёт параллельно. В режиме площадки SET будет подсказывать по этому таймингу.', 'Tap “⋯” on a row to add “until”, “who” and what runs in parallel. On set, SET will prompt you along this schedule.'],
   team: ['Отмечай статус: позвали → идёт. «Написать» готовит приглашение с условиями. Ставки видишь только ты.', 'Track status: asked → in. “Message” drafts an invite with terms. Only you see rates.'],
   looks: ['В «Настроить» оставь только нужные поля: без мейка — без визажиста. Из образов собираются карточки А4 для площадки.', 'A look = model, outfit, make-up, hair and a photo on one card. On set they queue up in order.'],
@@ -521,7 +558,7 @@ function vWelcome() {
     h += '<div class="chips">' + chip('Русский', S.lang === 'ru', 'lang', 'ru', 'sm') + chip('English', S.lang === 'en', 'lang', 'en', 'sm') + '</div>';
     h += '<h1>' + T('Давай<br>знакомиться', 'Nice to<br>meet you') + '</h1><p class="muted" style="margin:0">' + T('Заполнишь один раз — дальше всё подставится само', 'Fill this in once — the rest fills itself in') + '</p>';
     h += '<div class="grid2">' + field(T('Имя', 'Name'), inp('profile.name', p.name, { ph: T('Как к тебе обращаться', 'Your name') })) + field(T('Город', 'City'), inp('profile.city', p.city, { ph: T('Твой город', 'City') })) + '</div>';
-    h += field(T('Номер телефона', 'Phone number'), '<input class="inp" type="tel" inputmode="tel" autocomplete="tel" data-b="profile.phone" value="' + esc(p.phone || '') + '" placeholder="+7 900 000-00-00">') + '<span class="tiny muted pad4" style="margin-top:-10px">' + PHONE_HINT() + ' ' + T('Нужен, чтобы подключить подписку и чтобы команда могла с тобой связаться.', 'Needed for the subscription and so the team can reach you.') + '</span>' +
+    h += field(T('Номер телефона', 'Phone number'), phoneInp({ b: 'profile.phone' }, p.phone)) + '<span class="tiny muted pad4" style="margin-top:-10px">' + PHONE_HINT() + ' ' + T('Нужен, чтобы подключить подписку и чтобы команда могла с тобой связаться.', 'Needed for the subscription and so the team can reach you.') + '</span>' +
       field(T('Ник в Telegram', 'Telegram username'), '<input class="inp" data-b="profile.tg" data-tg="1" autocapitalize="off" autocorrect="off" value="' + esc(p.tg || '') + '" placeholder="@nick">');
     h += '<h2 style="margin-top:6px">' + T('Кто ты на съёмке?', 'What do you do on set?') + '</h2><span class="small muted pad4">' + T('Можно несколько', 'Pick as many as you like') + '</span>';
     ui.moreG = ui.moreG || {};
@@ -792,7 +829,7 @@ function pLooks(s) {
       note: () => field(T('Важно — будет красным', 'Important — shown in red'), inp(b + '.note', l.note)),
       time: () => field(T('Время', 'Time'), inp(b + '.time', l.time, { ph: '12:30' })),
       name: () => field(T('Название образа', 'Look name'), inp(b + '.name', l.name, { aria: T('Название образа', 'Look name') })),
-      ref: () => field(T('Референс (ссылка)', 'Reference (link)'), inp(b + '.ref', l.ref, { ph: 'pinterest.com/…' })) };
+      ref: () => field(T('Референс (ссылка)', 'Reference (link)'), inp(b + '.ref', l.ref, { ph: T('вставь ссылку', 'paste a link') })) };
     const rows = [['model', 'mua'], ['photos'], ['params'], ['clothes'], ['shoes', 'acc'], ['makeup'], ['hair', 'hairby'], ['shots'], ['comment'], ['note'], ['time', 'name'], ['ref']];
     h += '<div class="card ' + (i % 2 ? 'glow-sky' : 'glow-pink') + '"><div class="row between"><span class="look-num">' + T('Образ', 'Look') + ' ' + pad(i + 1) + '</span><div class="row"><button class="chip sm" aria-pressed="' + !!l.done + '" data-a="toggleLook" data-s="' + s.id + '" data-x="' + l.id + '">' + (l.done ? T('✓ снят', '✓ shot') : T('не снят', 'to shoot')) + '</button><button class="textbtn" data-a="delRow" data-s="' + s.id + '" data-x="looks|' + l.id + '" aria-label="' + T('Удалить образ', 'Delete look') + '">' + I.trash.replace('<svg', '<svg width="18" height="18"') + '</button></div></div>' +
       rows.map((r) => r.filter((k) => k === 'model' || on(k))).filter((r) => r.length).map((r) => r.length === 2 ? '<div class="grid2">' + F[r[0]]() + F[r[1]]() + '</div>' : F[r[0]]()).join('') + '</div>';
@@ -831,7 +868,7 @@ function printHtml(s) {
   const food = teamFood(s); if (food) h += '<p style="margin-top:10px"><b>' + T('Еда', 'Food') + ':</b> ' + esc(food) + '</p>';
   if (s.modules.looks && s.looks.length) h += '<h3 class="pb" style="margin-top:16px">' + T('Образы', 'Looks') + '</h3><div class="looks">' + s.looks.map((l, i) => '<div class="look">' + (lookPics(l).length ? '<div style="display:flex;gap:6px;margin-bottom:6px">' + lookPics(l).slice(0, 3).map((x) => imgTag(x, 'flex:1;min-width:0;height:150px;object-fit:cover;border-radius:6px')).join('') + '</div>' : '') + '<div style="font-family:var(--mono);font-size:11px">' + T('ОБРАЗ', 'LOOK') + ' ' + pad(i + 1) + '</div><b style="font-size:15px">' + esc(l.name || '—') + '</b><br>' + T('Модель', 'Model') + ': ' + esc(l.model || '—') + '<br>' + T('Одежда', 'Clothes') + ': ' + esc(l.clothes || '—') + '<br>' + T('Мейк', 'Make-up') + ': ' + esc(l.makeup || '—') + (l.mua ? ' · ' + T('визажист', 'MUA') + ' ' + esc(l.mua) : '') + '<br>' + T('Волосы', 'Hair') + ': ' + esc(l.hair || '—') + (l.shoes ? '<br>' + T('Обувь', 'Shoes') + ': ' + esc(l.shoes) : '') + (l.acc ? '<br>' + T('Аксессуары', 'Accessories') + ': ' + esc(l.acc) : '') + (l.comment ? '<br>' + esc(l.comment) : '') + (l.note ? '<br><b style="color:#B4271B">! ' + esc(l.note) + '</b>' : '') + '<div style="margin-top:6px">☐ ' + T('снят', 'shot') + '</div></div>').join('') + '</div>';
   const mp = (s.mood || []).filter((x) => x.kind === 'img'); const ml = (s.mood || []).filter((x) => x.kind === 'link');
-  if (mp.length || ml.length) h += '<h3 class="pb" style="margin-top:16px">' + T('Мудборд', 'Moodboard') + '</h3><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px">' + mp.map((x) => imgTag(x.id, 'width:100%;aspect-ratio:3/4;object-fit:cover;border-radius:8px')).join('') + '</div>' + (ml.length ? '<p style="font-size:11px;word-break:break-all">' + ml.map((x) => esc(x.url)).join('<br>') + '</p>' : '');
+  if (mp.length) h += '<h3 class="pb" style="margin-top:16px">' + T('Мудборд', 'Moodboard') + '</h3><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px">' + mp.map((x) => imgTag(x.id, 'width:100%;aspect-ratio:3/4;object-fit:cover;border-radius:8px')).join('') + '</div>';
   if (s.notes) h += '<p style="margin-top:14px;white-space:pre-line"><b>' + T('Заметки', 'Notes') + ':</b> ' + esc(s.notes) + '</p>';
   h += '<div class="foot">' + T('Собрано в SET · смета и ставки на этот лист не попадают', 'Made with SET · budget and rates are never printed') + '</div></div>';
   return h;
@@ -1148,7 +1185,7 @@ function vSheet() {
       (['money', 'mix'].includes(m.pay || 'money') ? '<div class="grid2">' + field(T('Ставка, ₽', 'Rate'), '<input class="inp mono" inputmode="numeric" id="mRate" value="' + esc(m.rate) + '">') + field(T('За', 'Per'), '<select class="inp" id="mUnit">' + UNITS.map((u) => '<option value="' + u[0] + '"' + ((m.unit || 'смена') === u[0] ? ' selected' : '') + '>' + esc(L() === 'en' ? u[1] : u[0]) + '</option>').join('') + '</select>') + '</div>' : '') +
       (['barter', 'cert', 'mix'].includes(m.pay) ? field(T('Бартер / сертификат: на сколько, ₽', 'Barter / voucher value'), '<input class="inp mono" inputmode="numeric" id="mBarter" value="' + esc(m.barter || '') + '">') : '') +
       field(T('Заметка', 'Note'), '<input class="inp" id="mNote" value="' + esc(m.note || '') + '" placeholder="' + T('монтаж входит, привозит свой свет…', 'editing included, brings own light…') + '">') +
-      (sh.isNew ? field(T('Телефон', 'Phone'), '<input class="inp" type="tel" inputmode="tel" id="mPhone" placeholder="+7 900 000-00-00" value="' + esc(sh.phone || '') + '">') + '<div class="grid2">' + field('Telegram', '<input class="inp" id="mTg" data-tg="1" autocapitalize="off" placeholder="@nick" value="' + esc(sh.tg || '') + '">') + field('Instagram', '<input class="inp" id="mInsta" placeholder="@" value="' + esc(sh.insta || '') + '">') + '</div>' : '') +
+      (sh.isNew ? field(T('Телефон', 'Phone'), phoneInp({ id: 'mPhone' }, sh.phone)) + '<div class="grid2">' + field('Telegram', '<input class="inp" id="mTg" data-tg="1" autocapitalize="off" placeholder="@nick" value="' + esc(sh.tg || '') + '">') + field('Instagram', '<input class="inp" id="mInsta" placeholder="@" value="' + esc(sh.insta || '') + '">') + '</div>' : '') +
       '<button class="btn big" data-a="saveMember">' + T('Сохранить', 'Save') + '</button>' + (!sh.isNew ? '<button class="btn danger" data-a="removeMember">' + T('Убрать из проекта', 'Remove from project') + '</button>' : '');
   }
   if (sh.type === 'pick') {
@@ -1162,7 +1199,7 @@ function vSheet() {
     const p = sh.data;
     h += '<div class="row between"><h2>' + (sh.isNew ? T('Новый человек', 'New person') : esc(p.name)) + '</h2><button class="iconbtn" data-a="closeSheet" aria-label="' + T('Закрыть', 'Close') + '">' + I.x + '</button></div>' +
       field(T('Имя', 'Name'), '<input class="inp" id="pName" value="' + esc(p.name) + '">') + field(T('Роль', 'Role'), roleSelect('', p.role).replace('data-b=""', 'id="pRole"')) +
-      field(T('Телефон', 'Phone'), '<input class="inp" type="tel" inputmode="tel" id="pPhone" value="' + esc(p.phone || '') + '" placeholder="+7 900 000-00-00">') + '<span class="tiny muted" style="margin-top:-8px">' + T('Добавляй контакты с согласия человека. Они хранятся только у тебя.', 'Add contacts with the person’s consent. They stay with you.') + '</span>' +
+      field(T('Телефон', 'Phone'), phoneInp({ id: 'pPhone' }, p.phone)) + '<span class="tiny muted" style="margin-top:-8px">' + T('Добавляй контакты с согласия человека. Они хранятся только у тебя.', 'Add contacts with the person’s consent. They stay with you.') + '</span>' +
       '<div class="grid2">' + field('Telegram', '<input class="inp" id="pTg" data-tg="1" autocapitalize="off" value="' + esc(p.tg || '') + '" placeholder="@nick">') + field('Instagram', '<input class="inp" id="pInsta" value="' + esc(p.insta || '') + '" placeholder="@">') + '</div>' +
       '<div class="col"><span class="tiny muted">' + T('Не ест', 'Food') + '</span><div class="chips">' + FOOD.slice(1).map((f) => '<button class="chip sm" data-a="togglePFood" data-x="' + f[0] + '" aria-pressed="' + (p.food || []).includes(f[0]) + '">' + esc(L() === 'en' ? f[2] : f[1]) + '</button>').join('') + '</div></div>' +
       field(T('Заметка', 'Note'), '<textarea class="inp" id="pNote" placeholder="' + T('Размеры, рост, что важно знать', 'Sizes, notes') + '">' + esc(p.note || '') + '</textarea>') +
@@ -1365,7 +1402,7 @@ const A = {
   onbNext: () => {
     const p = S.profile; const o = ui.onb;
     if (o.step === 1 && !p.name.trim()) { toast(T('Напиши, как тебя зовут', 'Tell us your name')); $('[data-b="profile.name"]')?.focus(); return; }
-    if (o.step === 1 && String(p.phone || '').replace(/\D/g, '').length < 10) { toast(T('Укажи номер телефона', 'Add your phone number')); $('[data-b="profile.phone"]')?.focus(); return; }
+    if (o.step === 1 && String(p.phone || '').replace(/\D/g, '').length < 10) { toast(T('Укажи номер телефона', 'Add your phone number')); $('input[type=tel][data-ph="profile.phone"]')?.focus(); return; }
     if (o.step === 1 && !p.roles.length && !p.ownRole.trim()) { toast(T('Выбери хотя бы одну роль', 'Pick at least one role')); return; }
     const clientOnly = p.roles.length > 0 && !p.ownRole && p.roles.every((r) => CLIENT_ROLES.includes(r));
     o.step = clientOnly && o.step === 1 ? 4 : o.step + 1; window.scrollTo(0, 0); render();
@@ -1464,7 +1501,7 @@ const A = {
   lfToggle: (el) => { const s = getShoot(el.dataset.s); if (!s.lf) { s.lf = {}; LOOK_F.forEach((f) => { s.lf[f[0]] = lfOn(s, f[0]); }); } s.lf[el.dataset.x] = !s.lf[el.dataset.x]; save(); render(); },
   outMode: (el) => makeOut(ui.sheet.s, el.dataset.x),
   delLookImg: (el) => { const s = getShoot(el.dataset.s); const [id, key = 'img'] = el.dataset.x.split('|'); const l = s.looks.find((x) => x.id === id); if (l && l[key]) { mDel(l[key]); l[key] = ''; save(); render(); } },
-  addMoodLink: async (el) => { const u = await askText(T('Ссылка на мудборд', 'Moodboard link'), T('Pinterest, Instagram или папка с фото', 'Pinterest, Instagram or a photo folder')); if (!u || !u.trim()) return; const s = getShoot(el.dataset.s); s.mood = s.mood || []; s.mood.push({ id: uid(), kind: 'link', url: u.trim() }); save(); render(); },
+  addMoodLink: async (el) => { const u = await askText(T('Ссылка на мудборд', 'Moodboard link'), T('ссылка на доску, папку или пост', 'link to a board, folder or post')); if (!u || !u.trim()) return; const s = getShoot(el.dataset.s); s.mood = s.mood || []; s.mood.push({ id: uid(), kind: 'link', url: u.trim() }); save(); render(); },
   delMood: (el) => { const s = getShoot(el.dataset.s); const it = (s.mood || []).find((x) => x.id === el.dataset.x); if (it && it.kind === 'img') mDel(it.id); s.mood = (s.mood || []).filter((x) => x.id !== el.dataset.x); ui.sheet = null; save(); render(); },
   viewImg: (el) => { ui.sheet = { type: 'img', s: el.dataset.s, id: el.dataset.x }; render(); },
   shareMood: async (el) => {
@@ -1595,7 +1632,7 @@ function pMood(s) {
   const items = s.mood || [];
   const pics = items.filter((x) => x.kind === 'img');
   const links = items.filter((x) => x.kind === 'link');
-  let h = '<span class="small muted pad4">' + T('Референсы по съёмке: свет, позы, цвет, локация. Команде мудборд уходит одной картинкой А4 — её же можно распечатать.', 'References: light, poses, colour, location. The team gets it as one A4 image you can also print.') + '</span>';
+  let h = '<span class="small muted pad4">' + T('Референсы по съёмке: свет, позы, цвет, локация.', 'References: light, poses, colour, location.') + '</span>';
   if (!items.length) h += '<div class="card dashed" style="align-items:center;text-align:center;padding:28px"><h3>' + T('Мудборд пустой', 'Moodboard is empty') + '</h3><span class="small muted">' + T('Для TFP хватит 5–6 картинок, для бренда — сколько нужно, чтобы все поняли одно и то же.', '5–6 images for TFP; for a brand, enough for everyone to see the same picture.') + '</span></div>';
   if (pics.length) h += '<div class="grid2">' + pics.map((x) => '<div class="col" style="gap:4px"><button data-a="viewImg" data-s="' + s.id + '" data-x="' + x.id + '" style="padding:0;border:none;background:var(--line);border-radius:18px;overflow:hidden;aspect-ratio:3/4">' + imgTag(x.id, 'width:100%;height:100%;object-fit:cover;display:block') + '</button><input class="inp" style="min-height:38px;padding:6px 10px;font-size:16px" data-b="shoot:' + s.id + '.mood:' + x.id + '.cap" value="' + esc(x.cap || '') + '" placeholder="' + T('подпись', 'caption') + '" aria-label="' + T('Подпись к фото', 'Photo caption') + '"></div>').join('') + '</div>';
   if (links.length) h += '<div class="card tight">' + links.map((x) => '<div class="li"><a class="grow" href="' + esc(/^https?:/i.test(x.url) ? x.url : 'https://' + x.url) + '" target="_blank" rel="noopener" style="word-break:break-all">' + esc(x.url) + '</a><button class="textbtn" data-a="delMood" data-s="' + s.id + '" data-x="' + x.id + '" aria-label="' + T('Удалить', 'Delete') + '">' + I.x.replace('<svg', '<svg width="16" height="16"') + '</button></div>').join('') + '</div>';
@@ -1742,12 +1779,12 @@ async function drawMoodPages(s) {
     c.textAlign = 'right'; c.font = "400 22px Inter, sans-serif"; c.fillStyle = '#4A4852'; c.fillText([s.date ? fmtDate(s.date, { year: true }) : '', s.place].filter(Boolean).join(' · '), W - M, 122); c.textAlign = 'left';
     if (dLines.length) { c.font = "400 24px Inter, sans-serif"; c.fillStyle = '#1A1A22'; dLines.forEach((ln, j) => c.fillText(ln, M, 168 + j * 32)); }
     const chunk = pics.slice(p * per, p * per + per); const [, rows] = grid(chunk.length);
-    const linkH = (p === pages - 1 && links.length ? Math.min(links.length, 3) * 26 + 20 : 0) + 44;
+    const linkH = 44;
     const gy = headH, gh = H - headH - linkH, ch = gh / rows;
     const ims = await Promise.all(chunk.map((x) => loadImg(x.id)));
     const perRow = []; let left = ims.length; for (let r = 0; r < rows; r++) { const k = Math.ceil(left / (rows - r)); perRow.push(k); left -= k; }
     let idx = 0; perRow.forEach((k, r) => { const w = W / k; for (let j = 0; j < k; j++, idx++) { const im = ims[idx]; const cap = chunk[idx] && chunk[idx].cap; const x = j * w, y = gy + r * ch; c.save(); c.beginPath(); c.rect(Math.floor(x), Math.floor(y), Math.ceil(w) + 1, Math.ceil(ch) + 1); c.clip(); c.fillStyle = '#EFEDEA'; c.fillRect(x, y, w + 1, ch + 1); if (im) { const sc = Math.max(w / im.width, ch / im.height); c.drawImage(im, x + (w - im.width * sc) / 2, y + (ch - im.height * sc) / 2, im.width * sc, im.height * sc); } c.restore(); drawCap(c, cap, x, y, w, ch); } });
-    let ly = H - linkH + 30; if (p === pages - 1 && links.length) { c.font = "400 18px Inter, sans-serif"; c.fillStyle = '#3B4FB0'; links.slice(0, 3).forEach((u) => { wrapLines(c, u, W - 2 * M, 1).forEach((ln) => c.fillText(ln, M, ly)); ly += 26; }); }
+    let ly = H - linkH + 30; 
     c.font = "400 18px Inter, sans-serif"; c.fillStyle = '#6E6B75'; c.fillText(T('SET — приложение для съёмок', 'SET — the app for shoots'), M, H - 16);
     const blob = await new Promise((r) => cv.toBlob(r, 'image/png'));
     files.push(new File([blob], fileBase(s, 'moodboard') + (pages > 1 ? '-' + (p + 1) : '') + '.png', { type: 'image/png' }));
@@ -1758,6 +1795,7 @@ const pad2 = (n) => String(n).padStart(2, '0');
 const fileBase = (s, k) => 'set-' + k + '-' + (titleOf(s).replace(/[^\wа-яё]+/gi, '-').replace(/^-|-$/g, '').slice(0, 40) || 'sheet');
 async function makeOut(sid, kind) {
   const s = getShoot(sid); if (!s) return;
+  if (kind === 'mood' && !(s.mood || []).some((x) => x.kind === 'img')) { toast(T('Добавь хотя бы одно фото — ссылки на лист не попадают', 'Add at least one photo — links are not printed')); return; }
   ui.sheet = { type: 'out', s: sid, kind, title: kind === 'mood' ? T('Мудборд', 'Moodboard') : T('Карточки образов', 'Look cards') }; render();
   try { const files = kind === 'looks' ? await drawLookCards(s) : kind === 'looks4' ? await drawLookPages(s) : await drawMoodPages(s); if (!ui.sheet || ui.sheet.type !== 'out' || ui.sheet.s !== sid) return; ui.sheet.files = files; ui.sheet.urls = files.map((f) => URL.createObjectURL(f)); render(); }
   catch (e) { toast(T('Не получилось собрать лист', 'Could not build the sheet')); }
@@ -1893,11 +1931,13 @@ document.addEventListener('click', (ev) => {
 });
 document.addEventListener('input', (ev) => {
   const el = ev.target; const b = el.dataset.b;
+  if (el.dataset.ph) { syncPhone(el, false); return; }
   if (el.classList && el.classList.contains('tlw')) growTa(el);
   if (b) { setPath(b, el.value); if (el.dataset.live) { clearTimeout(el._t); el._t = setTimeout(render, 120); } }
 });
 document.addEventListener('change', (ev) => {
   const el = ev.target;
+  if (el.dataset.ph) { syncPhone(el, true); return; }
   if (el.type === 'tel' && el.value) el.value = fmtPhone(el.value);
   if (el.dataset.tg && el.value) el.value = tgNick(el.value);
   if (el.dataset.time) el.value = normTime(el.value);
