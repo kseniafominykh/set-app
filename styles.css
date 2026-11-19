@@ -212,3 +212,4 @@ input[type=time].inp::-webkit-date-and-time-value, input[type=date].inp::-webkit
 
 .tl textarea.tlw { min-height: 44px; resize: none; overflow: hidden; line-height: 1.3; padding-top: 11px; padding-bottom: 11px; }
 .cal span.empty { display: block; }
+.ndot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: #4A82E6; box-shadow: 0 0 0 3px rgba(74,130,230,0.22); vertical-align: middle; margin-left: 7px; flex-shrink: 0; }

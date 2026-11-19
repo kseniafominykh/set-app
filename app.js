@@ -1,6 +1,6 @@
 'use strict';
 /* SET — beta. All data lives on this device (localStorage). */
-const VERSION = '0.14.2 beta';
+const VERSION = '0.15.0 beta';
 const APP_URL = (location.host + location.pathname).replace(/index\.html$/, '').replace(/\/$/, '');
 const KEY = 'set.v1';
 
@@ -270,6 +270,7 @@ function _oldTemplate(s) {
 
 function hints(s) {
   const out = [];
+  if (s.src === 'set' && s.sentKey && s.sentKey !== snapKey(s)) out.push({ text: T('После отправки ссылки проект изменился. Команда увидит изменения, когда откроет новую ссылку.', 'The project changed after you sent the link. The team sees the changes when they open a new link.'), act: 'tab', arg: 'team', label: T('Разослать', 'Send') });
   const h = durationH(s);
   if (h > 5 && !hasMeal(s)) out.push({ text: T('Съёмка ' + Math.round(h) + ' ' + plural(Math.round(h), 'час', 'часа', 'часов') + ' — запланируй обед для команды. Кто что не ест — в карточках людей.', 'The shoot is ' + Math.round(h) + 'h long — plan lunch for the team.'), act: 'addLunch', label: T('Добавить обед', 'Add lunch') });
   if (h > 10) out.push({ text: T('Больше 10 часов — это переработка. Заложи её в смету и предупреди команду.', 'Over 10 hours is overtime. Budget for it and warn the team.') });
@@ -612,7 +613,7 @@ function vToday() {
     all.slice(0, 3).forEach((x) => { h += '<div class="hint"><span class="dot"></span><div class="col grow" style="gap:6px"><span class="tiny muted">' + esc(titleOf(x.s)) + '</span><span>' + esc(x.text) + '</span></div>' + (x.act ? '<button class="btn sm soft" data-a="' + x.act + '" data-x="' + esc(x.arg || '') + '" data-s="' + x.s.id + '">' + esc(x.label) + '</button>' : '<a class="btn sm soft" href="#/p/' + x.s.id + '">' + T('Открыть', 'Open') + '</a>') + '</div>'; });
   }
   if (up.length > 1) {
-    h += '<h3 class="pad4">' + T('Дальше', 'Coming up') + '</h3><div class="card tight">' + up.slice(nextS && nextS.date !== t ? 1 : 0).filter((s) => s.date !== t).slice(0, 5).map((s) => '<a class="li" href="' + (s.src === 'own' ? '#/own/' : '#/p/') + s.id + '"><span class="mono small" style="min-width:58px">' + esc(fmtDate(s.date).replace(/ \d{4}$/, '')) + '</span><span class="grow"><b style="font-weight:600">' + esc(titleOf(s)) + '</b><br><span class="tiny muted">' + T('сбор', 'call') + ' ' + esc(s.call) + '</span></span>' + I.next.replace('<svg', '<svg width="18" height="18"') + '</a>').join('') + '</div>';
+    h += '<h3 class="pad4">' + T('Дальше', 'Coming up') + '</h3><div class="card tight">' + up.slice(nextS && nextS.date !== t ? 1 : 0).filter((s) => s.date !== t).slice(0, 5).map((s) => '<a class="li" href="' + (s.src === 'own' ? '#/own/' : '#/p/') + s.id + '"><span class="mono small" style="min-width:58px">' + esc(fmtDate(s.date).replace(/ \d{4}$/, '')) + '</span><span class="grow"><b style="font-weight:600">' + esc(titleOf(s)) + (gChg(s).length ? ndot : '') + '</b><br><span class="tiny muted">' + T('сбор', 'call') + ' ' + esc(s.call) + '</span></span>' + I.next.replace('<svg', '<svg width="18" height="18"') + '</a>').join('') + '</div>';
   }
   h += '<a class="tiny muted pad4" href="#/help" style="align-self:center;text-decoration:underline;margin-top:4px;min-height:44px;display:inline-flex;align-items:center;padding:0 12px">' + T('Нужна помощь? Напиши нам', 'Need help? Write to us') + '</a>';
   h += '</div>' + nav('today');
@@ -631,7 +632,7 @@ function vProjects() {
   if (!shown.length) h += '<div class="empty">' + (ui.filter === 'past' ? T('Здесь будут прошедшие съёмки', 'Past shoots will appear here') : T('Пока пусто. Нажми «+» внизу.', 'Nothing yet. Tap “+” below.')) + '</div>';
   shown.forEach((s) => {
     const dd = parseIso(s.date);
-    h += '<a class="card glow-' + (KINDS[s.kind]?.glow || 'pink') + '" href="#/p/' + s.id + '" style="text-decoration:none;color:inherit;flex-direction:row;gap:14px;align-items:center"><span class="col" style="gap:0;min-width:54px">' + (dd ? '<span class="big-date" style="font-size:40px">' + dd.getDate() + '</span><span class="tiny">' + MON_S[L()][dd.getMonth()] + '</span>' : '<span class="tiny muted">' + T('без даты', 'no date') + '</span>') + '</span><span class="col grow" style="gap:4px"><b style="font-size:16px;font-weight:600">' + esc(titleOf(s)) + '</b><span class="tiny">' + (s.src === 'guest' ? T('позвали', 'invited') + (s.guest?.from?.name ? ' · ' + esc(s.guest.from.name) : '') : esc(L() === 'en' ? KINDS[s.kind]?.en : KINDS[s.kind]?.ru)) + ' · ' + s.team.length + ' ' + T(plural(s.team.length, 'человек', 'человека', 'человек'), 'people') + (s.date && s.date >= t ? ' · ' + relDay(s.date) : '') + '</span></span>' + (s.status === 'done' ? '<span class="badge ok">' + T('сдано', 'done') + '</span>' : '') + '</a>';
+    h += '<a class="card glow-' + (KINDS[s.kind]?.glow || 'pink') + '" href="#/p/' + s.id + '" style="text-decoration:none;color:inherit;flex-direction:row;gap:14px;align-items:center"><span class="col" style="gap:0;min-width:54px">' + (dd ? '<span class="big-date" style="font-size:40px">' + dd.getDate() + '</span><span class="tiny">' + MON_S[L()][dd.getMonth()] + '</span>' : '<span class="tiny muted">' + T('без даты', 'no date') + '</span>') + '</span><span class="col grow" style="gap:4px"><b style="font-size:16px;font-weight:600">' + esc(titleOf(s)) + (gChg(s).length ? ndot : '') + '</b><span class="tiny">' + (s.src === 'guest' ? T('позвали', 'invited') + (s.guest?.from?.name ? ' · ' + esc(s.guest.from.name) : '') : esc(L() === 'en' ? KINDS[s.kind]?.en : KINDS[s.kind]?.ru)) + ' · ' + s.team.length + ' ' + T(plural(s.team.length, 'человек', 'человека', 'человек'), 'people') + (s.date && s.date >= t ? ' · ' + relDay(s.date) : '') + '</span></span>' + (s.status === 'done' ? '<span class="badge ok">' + T('сдано', 'done') + '</span>' : '') + '</a>';
   });
   h += '<div class="card dashed" style="gap:10px"><b>' + T('Позвали в проект?', 'Invited to a project?') + '</b><span class="small muted">' + T('Ссылка открылась не в приложении? Вставь её сюда — проект сохранится у тебя.', 'Link opened outside the app? Paste it here and the project is saved.') + '</span><input class="inp" id="joinPaste" placeholder="' + T('ссылка от продюсера', 'link from the producer') + '" autocomplete="off"><button class="btn soft" data-a="pasteJoin">' + T('Открыть проект', 'Open project') + '</button></div>';
   h += '</div>' + nav('projects');
@@ -988,7 +989,35 @@ function shareSnapshot(s, memberId) {
       looks: (s.looks || []).map((l) => pickK(l, ['id', 'name', 'model', 'clothes', 'makeup', 'hair', 'mua', 'ref', 'done'])),
       mood: (s.mood || []).filter((x) => x.kind === 'link' && x.url).map((x) => ({ kind: 'link', url: x.url })) } };
 }
-async function shareLink(s, memberId) { const snap = shareSnapshot(s, memberId); save(); return appBase() + '#/join/' + await packJson(snap); }
+const snapKey = (s) => JSON.stringify(shareSnapshot(s, '').s);
+async function shareLink(s, memberId) { const snap = shareSnapshot(s, memberId); s.sentKey = snapKey(s); save(); return appBase() + '#/join/' + await packJson(snap); }
+const LOOK_ROLES = ['stylist', 'mua', 'hair', 'nails', 'stylistassist', 'wardrobe', 'costume', 'tailor', 'grooming', 'sfx', 'photo', 'video', 'dop', 'creative', 'director', 'producer', 'prodassist', 'setdesign', 'props'];
+function guestChanges(o, n, meId) {
+  const k = new Set(); const J = (x) => JSON.stringify(x == null ? '' : x);
+  const meO = (o.team || []).find((m) => m.id === meId); const meN = (n.team || []).find((m) => m.id === meId);
+  const all = !meN;
+  const nameW = meN && meN.name ? String(meN.name).trim().split(/\s+/)[0].toLowerCase() : '';
+  const R0 = meN && ROLE[meN.role];
+  const roleWs = (R0 ? [R0.ru, R0.en] : [meN && meN.role || '']).map((x) => String(x || '').toLowerCase().split(/[\s/]+/)[0]).filter((x) => x.length > 2).map((x) => x.slice(0, Math.max(4, x.length - 2)));
+  const mine = (txt) => { const t = String(txt || '').toLowerCase(); return (nameW.length > 1 && t.includes(nameW)) || roleWs.some((w) => t.includes(w)); };
+  if (['date', 'call', 'end'].some((f) => J(o[f]) !== J(n[f]))) k.add('when');
+  if (['place', 'address'].some((f) => J(o[f]) !== J(n[f]))) k.add('where');
+  const MF = ['role', 'call', 'note', 'rate', 'unit', 'pay', 'barter'];
+  if (meN && J(pickK(meO || {}, MF)) !== J(pickK(meN, MF))) k.add('me');
+  const TF = ['t', 't2', 'w', 'who', 'det'];
+  const tRel = (x) => all || !x.who || mine(x.who) || mine(x.w);
+  (n.timing || []).forEach((x) => { const y = (o.timing || []).find((z) => z.id === x.id); if ((tRel(x) || (y && tRel(y))) && (!y || J(pickK(y, TF)) !== J(pickK(x, TF)))) k.add('t:' + x.id); });
+  if ((o.timing || []).some((y) => !(n.timing || []).some((x) => x.id === y.id) && tRel(y))) k.add('timing');
+  const LF = ['name', 'model', 'clothes', 'makeup', 'hair', 'mua', 'ref'];
+  const lRel = (l) => all || LOOK_ROLES.includes(meN.role) || mine(LF.map((f) => l[f] || '').join(' '));
+  (n.looks || []).forEach((l) => { const y = (o.looks || []).find((z) => z.id === l.id); if ((lRel(l) || (y && lRel(y))) && (!y || J(pickK(y, LF)) !== J(pickK(l, LF)))) k.add('l:' + l.id); });
+  if ((o.looks || []).some((y) => !(n.looks || []).some((l) => l.id === y.id) && lRel(y))) k.add('looks');
+  const mu = (x) => (x.mood || []).map((m) => m.url).join('|');
+  if (mu(o) !== mu(n)) k.add('mood');
+  return [...k];
+}
+const gChg = (s) => (s && s.src === 'guest' && s.guest && Array.isArray(s.guest.chg) ? s.guest.chg : []);
+const ndot = '<span class="ndot" role="img" aria-label="' + T('изменено', 'changed') + '"></span>';
 function importShared(d) {
   const ex = S.shoots.find((x) => x.src === 'guest' && x.guest && x.guest.sid === d.sid);
   if (ex && ex.guest.u > d.u) { toast(T('У тебя уже более свежая версия этого проекта', 'You already have a newer version of this project')); return ex.id; }
@@ -1004,9 +1033,10 @@ function importShared(d) {
     guest: { sid: d.sid, u: d.u, me, from: d.from || {} } };
   if (mem && my.fee === '' && fee) my.fee = fee;
   (g.team || []).forEach((m) => { if (!m.pay) m.pay = 'money'; if (!m.unit) m.unit = 'смена'; });
+  if (ex) { const ch = guestChanges(ex, g, me); g.guest.chg = [...new Set([...gChg(ex), ...ch])]; g.guest.chgAt = ch.length ? Date.now() : ex.guest.chgAt; }
   if (ex) Object.assign(ex, g); else S.shoots.push(g);
   save();
-  toast(ex ? T('Проект обновлён', 'Project updated') : T('Проект сохранён в SET', 'Project saved to SET'));
+  toast(ex ? (gChg(ex).length ? T('Проект обновлён — изменения отмечены голубым', 'Project updated — changes are marked blue') : T('Проект обновлён', 'Project updated')) : T('Проект сохранён в SET', 'Project saved to SET'));
   return g.id;
 }
 async function joinFrom(code) {
@@ -1019,18 +1049,19 @@ async function joinFrom(code) {
 }
 const fmtStamp = (ms) => { if (!ms) return ''; const d = new Date(ms); return d.getDate() + ' ' + MON_S[L()][d.getMonth()] + ', ' + pad(d.getHours()) + ':' + pad(d.getMinutes()); };
 function vGuest(s) {
-  const g = s.guest || {}; const me = (s.team || []).find((m) => m.id === g.me); const from = g.from || {};
+  const g = s.guest || {}; const me = (s.team || []).find((m) => m.id === g.me); const from = g.from || {}; const chg = new Set(gChg(s)); const dot = (k) => (chg.has(k) ? ndot : '');
   let h = '<div class="screen has-cta"><div class="top">' + backBtn('#/projects') + '<span class="kicker">' + T('Тебя позвали', 'You’re on the team') + '</span><span style="width:44px"></span></div>';
-  h += '<div class="col pad4" style="gap:6px"><span class="kicker">' + (s.date ? fmtDate(s.date, { wd: true }) + ' · ' + relDay(s.date) : T('дата скоро', 'date tbc')) + '</span><h1 style="font-size:40px">' + esc(titleOf(s)) + '</h1><span class="small muted">' + (from.name ? T('от ', 'from ') + esc(from.name) + ' · ' : '') + T('версия от ', 'version of ') + esc(fmtStamp(g.u)) + '</span></div>';
-  if (me) h += '<div class="card glow-pink" style="gap:8px"><span class="kicker">' + T('твоё', 'yours') + '</span><h2>' + esc(roleName(me.role) || T('в команде', 'on the team')) + '</h2><span class="small">' + T('сбор ', 'call ') + '<b class="mono">' + esc(me.call || s.call || '—') + '</b>' + (memberPayText(me) && (me.rate || me.barter || me.pay === 'tfp') ? ' · ' + esc(memberPayText(me)) : '') + '</span>' + (me.note ? '<span class="small">' + esc(me.note) + '</span>' : '') + '</div>';
+  h += '<div class="col pad4" style="gap:6px"><span class="kicker">' + (s.date ? fmtDate(s.date, { wd: true }) + ' · ' + relDay(s.date) : T('дата скоро', 'date tbc')) + dot('when') + '</span><h1 style="font-size:40px">' + esc(titleOf(s)) + '</h1><span class="small muted">' + (from.name ? T('от ', 'from ') + esc(from.name) + ' · ' : '') + T('версия от ', 'version of ') + esc(fmtStamp(g.u)) + '</span></div>';
+  if (chg.size) h += '<div class="hint" style="background:rgba(74,130,230,.12)"><span class="ndot" style="margin:5px 0 0"></span><span class="grow">' + T('Проект обновлён' + (g.chgAt ? ' ' + fmtStamp(g.chgAt) : '') + '. То, что касается тебя, отмечено голубой точкой.', 'Project updated' + (g.chgAt ? ' ' + fmtStamp(g.chgAt) : '') + '. What concerns you is marked with a blue dot.') + '</span><button class="btn sm soft" data-a="guestSeen" data-s="' + s.id + '">' + T('Понятно', 'Got it') + '</button></div>';
+  if (me) h += '<div class="card glow-pink" style="gap:8px"><span class="kicker">' + T('твоё', 'yours') + dot('me') + '</span><h2>' + esc(roleName(me.role) || T('в команде', 'on the team')) + '</h2><span class="small">' + T('сбор ', 'call ') + '<b class="mono">' + esc(me.call || s.call || '—') + '</b>' + (memberPayText(me) && (me.rate || me.barter || me.pay === 'tfp') ? ' · ' + esc(memberPayText(me)) : '') + '</span>' + (me.note ? '<span class="small">' + esc(me.note) + '</span>' : '') + '</div>';
   const addr = [s.place, s.address].filter(Boolean).join(', ');
-  h += '<div class="card" style="gap:10px"><div class="row between"><span class="small muted">' + T('Сбор', 'Call') + '</span><b class="mono">' + esc(s.call || '—') + '</b></div>' + (s.end ? '<div class="row between"><span class="small muted">' + T('Конец', 'Wrap') + '</span><b class="mono">' + esc(s.end) + '</b></div>' : '') +
-    (addr ? '<div class="col" style="gap:6px"><span class="small muted">' + T('Где', 'Where') + '</span><span>' + esc(addr) + '</span><a class="btn soft sm" style="align-self:flex-start" target="_blank" rel="noopener" href="https://yandex.ru/maps/?text=' + encodeURIComponent(addr) + '">' + T('Открыть на карте', 'Open map') + '</a></div>' : '') + '</div>';
-  if (s.timing && s.timing.length) h += '<h3 class="pad4">' + T('Тайминг', 'Schedule') + '</h3><div class="card tight">' + sortedTiming(s).map((x) => '<div class="li" style="align-items:flex-start"><span class="mono small" style="min-width:96px">' + esc(x.t) + (x.t2 ? '–' + esc(x.t2) : '') + '</span><span class="grow"><b style="font-weight:600">' + esc(x.w || '') + '</b>' + (x.who || x.det ? '<br><span class="tiny muted">' + esc([x.who, x.det].filter(Boolean).join(' · ')) + '</span>' : '') + '</span></div>').join('') + '</div>';
-  if (s.looks && s.looks.length) h += '<h3 class="pad4">' + T('Образы', 'Looks') + '</h3>' + s.looks.map((l, i) => '<div class="card ' + (i % 2 ? 'glow-sky' : 'glow-pink') + '" style="gap:6px"><span class="look-num">' + T('Образ', 'Look') + ' ' + pad(i + 1) + (l.done ? ' · ' + T('снят', 'shot') : '') + '</span>' + (l.name ? '<b>' + esc(l.name) + '</b>' : '') + [[T('модель', 'model'), l.model], [T('одежда', 'outfit'), l.clothes], [T('мейк', 'make-up'), l.makeup], [T('волосы', 'hair'), l.hair], [T('визажист', 'MUA'), l.mua], [T('референс', 'ref'), l.ref]].filter((r) => r[1]).map((r) => '<span class="small"><span class="muted">' + r[0] + ':</span> ' + esc(r[1]) + '</span>').join('') + '</div>').join('');
-  if (s.mood && s.mood.length) h += '<h3 class="pad4">' + T('Мудборд', 'Moodboard') + '</h3><div class="card tight">' + s.mood.map((m) => '<a class="li" target="_blank" rel="noopener" href="' + esc(m.url) + '"><span class="grow small" style="word-break:break-all">' + esc(m.url) + '</span></a>').join('') + '</div>';
+  h += '<div class="card" style="gap:10px"><div class="row between"><span class="small muted">' + T('Сбор', 'Call') + dot('when') + '</span><b class="mono">' + esc(s.call || '—') + '</b></div>' + (s.end ? '<div class="row between"><span class="small muted">' + T('Конец', 'Wrap') + '</span><b class="mono">' + esc(s.end) + '</b></div>' : '') +
+    (addr ? '<div class="col" style="gap:6px"><span class="small muted">' + T('Где', 'Where') + dot('where') + '</span><span>' + esc(addr) + '</span><a class="btn soft sm" style="align-self:flex-start" target="_blank" rel="noopener" href="https://yandex.ru/maps/?text=' + encodeURIComponent(addr) + '">' + T('Открыть на карте', 'Open map') + '</a></div>' : '') + '</div>';
+  if (s.timing && s.timing.length) h += '<h3 class="pad4">' + T('Тайминг', 'Schedule') + dot('timing') + '</h3><div class="card tight">' + sortedTiming(s).map((x) => '<div class="li" style="align-items:flex-start"><span class="mono small" style="min-width:96px">' + esc(x.t) + (x.t2 ? '–' + esc(x.t2) : '') + '</span><span class="grow"><b style="font-weight:600">' + esc(x.w || '') + dot('t:' + x.id) + '</b>' + (x.who || x.det ? '<br><span class="tiny muted">' + esc([x.who, x.det].filter(Boolean).join(' · ')) + '</span>' : '') + '</span></div>').join('') + '</div>';
+  if (s.looks && s.looks.length) h += '<h3 class="pad4">' + T('Образы', 'Looks') + dot('looks') + '</h3>' + s.looks.map((l, i) => '<div class="card ' + (i % 2 ? 'glow-sky' : 'glow-pink') + '" style="gap:6px"><span class="look-num">' + T('Образ', 'Look') + ' ' + pad(i + 1) + (l.done ? ' · ' + T('снят', 'shot') : '') + dot('l:' + l.id) + '</span>' + (l.name ? '<b>' + esc(l.name) + '</b>' : '') + [[T('модель', 'model'), l.model], [T('одежда', 'outfit'), l.clothes], [T('мейк', 'make-up'), l.makeup], [T('волосы', 'hair'), l.hair], [T('визажист', 'MUA'), l.mua], [T('референс', 'ref'), l.ref]].filter((r) => r[1]).map((r) => '<span class="small"><span class="muted">' + r[0] + ':</span> ' + esc(r[1]) + '</span>').join('') + '</div>').join('');
+  if (s.mood && s.mood.length) h += '<h3 class="pad4">' + T('Мудборд', 'Moodboard') + dot('mood') + '</h3><div class="card tight">' + s.mood.map((m) => '<a class="li" target="_blank" rel="noopener" href="' + esc(m.url) + '"><span class="grow small" style="word-break:break-all">' + esc(m.url) + '</span></a>').join('') + '</div>';
   if (s.team && s.team.length) h += '<h3 class="pad4">' + T('Команда', 'Team') + '</h3><div class="card tight">' + s.team.map((m) => '<div class="li"><span class="avatar sm soft">' + esc(initials(m.name)) + '</span><span class="grow"><b style="font-weight:600">' + esc(m.name) + (m.id === g.me ? T(' · это ты', ' · you') : '') + '</b><br><span class="tiny muted">' + esc(roleName(m.role)) + (m.call ? ' · ' + T('сбор ', 'call ') + esc(m.call) : '') + '</span></span></div>').join('') + '</div>';
-  h += '<span class="tiny muted pad4">' + T('Когда ' + (from.name || 'продюсер') + ' что-то поменяет, придёт новая ссылка — открой её, и проект здесь обновится.', 'When the producer changes something you’ll get a new link — open it and this project updates.') + '</span>';
+  h += '<span class="tiny muted pad4">' + T('Когда ' + (from.name || 'продюсер') + ' что-то поменяет, придёт новая ссылка. Открой её — проект здесь обновится, а то, что касается тебя, отметится голубой точкой.', 'When the producer changes something you’ll get a new link. Open it — the project updates and what concerns you gets a blue dot.') + '</span>';
   h += '<button class="btn ghost" data-a="guestDelete" data-s="' + s.id + '">' + T('Убрать проект у себя', 'Remove from my SET') + '</button>';
   h += '</div><div class="cta">' + (s.timing && s.timing.length ? '<a class="btn big grow" href="#/p/' + s.id + '/onset">' + T('Режим площадки', 'On set') + '</a>' : '') + (from.tg ? '<a class="btn ghost" style="min-height:60px;border-radius:26px" href="https://t.me/' + esc(tgNick(from.tg).slice(1)) + '" target="_blank" rel="noopener">Telegram</a>' : '') + (from.phone ? '<a class="btn ghost" style="min-height:60px;border-radius:26px" href="tel:' + esc(String(from.phone).replace(/[^\d+]/g, '')) + '">' + T('Позвонить', 'Call') + '</a>' : '') + '</div>' + nav('projects');
   return h;
@@ -1365,6 +1396,7 @@ const A = {
   shareClientGuide: (el) => { const s = getShoot(el.dataset.s); const c = s.checklist.find((x) => /памятка|guide/i.test(x.text)); if (c) { c.done = true; save(); } shareSheet(T('Памятка клиенту', 'Client guide'), guideText(s)); },
   invitePerson: async (el) => { const s = getShoot(el.dataset.s); const m = s.team.find((x) => x.id === el.dataset.x); if (!m.status) { m.status = 'asked'; save(); } const link = await shareLink(s, m.id); ui.sheet = { type: 'share', title: m.name, text: personText(s, m) + '\n\n' + T('Тайминг, адрес и твой образ — в SET:', 'Schedule, address and your look — in SET:') + '\n' + link, phone: S.people.find((p) => p.id === m.pid)?.phone }; render(); },
   pasteJoin: () => { const v = ($('#joinPaste')?.value || '').trim(); const i = v.indexOf('#/join/'); if (i < 0) { toast(T('Это не ссылка на проект SET', 'This is not a SET project link')); return; } joinFrom(v.slice(i + 7)); },
+  guestSeen: (el) => { const s = getShoot(el.dataset.s); if (s && s.guest) { s.guest.chg = []; save(); render(); } },
   guestDelete: async (el) => { if (!await askConfirm(T('Убрать этот проект у себя? У продюсера он останется.', 'Remove this project from your SET? The producer keeps it.'))) return; S.shoots = S.shoots.filter((x) => x.id !== el.dataset.s); save(); location.hash = '#/projects'; },
   shareTo: async (el) => {
     const text = $('#shareText')?.value || ui.sheet.text; const k = el.dataset.x;
