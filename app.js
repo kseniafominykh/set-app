@@ -1,6 +1,6 @@
 'use strict';
 /* SET — beta. All data lives on this device (localStorage). */
-const VERSION = '0.14.0 beta';
+const VERSION = '0.14.2 beta';
 const APP_URL = (location.host + location.pathname).replace(/index\.html$/, '').replace(/\/$/, '');
 const KEY = 'set.v1';
 
@@ -387,15 +387,15 @@ function vPro() {
   let h = '<div class="screen"><div class="top">' + backBtn('#/me') + '<span class="kicker">' + T('Подписка', 'Subscription') + '</span><span style="width:44px"></span></div>';
   h += '<h1 class="pad4">SET<br>' + T('организатору', 'for organisers') + '</h1>';
   h += '<div class="card glow-pink" style="padding:22px"><span class="small">' + esc(subStatusText()) + '</span><span class="mono" style="font-size:38px;letter-spacing:-0.02em">' + money(SUB.price) + ' ₽<span class="small muted" style="font-family:var(--body)"> / ' + T('месяц', 'month') + '</span></span>' +
-    [[T('Сколько угодно съёмок', 'Unlimited shoots')], [T('Смета с бартером и резервом', 'Budgets with barter and contingency')], [T('Лист на площадку и режим площадки', 'Set sheet and on-set mode')], [T('Мой доход и выгрузка для налоговой', 'Income tracking and tax export')]].map((x) => '<span class="small">✓ ' + esc(x[0]) + '</span>').join('') + '</div>';
+    [[T('Сколько угодно съёмок', 'Unlimited shoots')], [T('Смета с бартером и резервом', 'Budgets with barter and contingency')], [T('Лист на площадку и режим площадки', 'Set sheet and on-set mode')], [T('Мой доход и таблица для учёта', 'Income tracking and CSV export')]].map((x) => '<span class="small">✓ ' + esc(x[0]) + '</span>').join('') + '</div>';
   h += '<div class="card"><h3>' + T('1. Оплати по СБП', '1. Pay via SBP') + '</h3>' +
     (SUB.qr ? '<img src="' + esc(SUB.qr) + '" alt="QR СБП" style="width:220px;max-width:100%;align-self:center;border-radius:16px;background:#fff;padding:10px">' : '') +
     (SUB.payUrl ? '<a class="btn" href="' + esc(SUB.payUrl) + '" target="_blank" rel="noopener">' + T('Открыть оплату в банке', 'Open payment in your bank') + '</a>' : '<span class="small muted">' + T('Ссылка на оплату скоро появится', 'Payment link coming soon') + '</span>') +
     '<span class="tiny muted">' + T('Картой любого российского банка через приложение банка. Сумма — ', 'Any Russian bank card via your bank app. Amount: ') + money(SUB.price) + ' ₽</span></div>';
   h += '<div class="card"><h3>' + T('2. Напиши мне', '2. Message me') + '</h3><span class="small">' + T('Пришли скриншот оплаты и свой код:', 'Send the payment screenshot and your code:') + '</span><button class="btn soft mono" data-a="copyText" data-x="' + esc(S.deviceId) + '" style="font-size:22px;letter-spacing:0.08em">' + esc(S.deviceId) + '</button>' +
     field(T('Твой номер телефона', 'Your phone number'), '<input class="inp" type="tel" inputmode="tel" autocomplete="tel" data-b="profile.phone" value="' + esc(S.profile.phone || '') + '" placeholder="+7 900 000-00-00">') + '<span class="tiny muted pad4" style="margin-top:-10px">' + PHONE_HINT() + '</span>' +
-    '<div class="grid2">' + (SUB.tg ? '<a class="btn" href="https://t.me/' + esc(SUB.tg) + '" target="_blank" rel="noopener">Telegram</a>' : '') + (SUB.wa ? '<a class="btn" href="https://wa.me/' + esc(SUB.wa) + '?text=' + encodeURIComponent(msg) + '" target="_blank" rel="noopener">WhatsApp</a>' : '') + '</div></div>';
-  h += '<div class="card"><h3>' + T('3. Нажми ссылку из ответа', '3. Tap the link I send back') + '</h3><span class="small muted">' + T('Подписка включится на этом телефоне. Данные никуда не пропадут.', 'The subscription turns on for this phone. Your data stays.') + '</span><input class="inp mono" id="actCode" placeholder="' + T('или вставь код активации сюда', 'or paste the activation code') + '"><button class="btn soft" data-a="activateManual">' + T('Активировать', 'Activate') + '</button></div>';
+    (!SUB.tg && !SUB.wa ? '<span class="small muted">' + T('Контакт для оплаты скоро появится.', 'Payment contact coming soon.') + '</span>' : '') + '<div class="grid2">' + (SUB.tg ? '<a class="btn" href="https://t.me/' + esc(SUB.tg) + '" target="_blank" rel="noopener">Telegram</a>' : '') + (SUB.wa ? '<a class="btn" href="https://wa.me/' + esc(SUB.wa) + '?text=' + encodeURIComponent(msg) + '" target="_blank" rel="noopener">WhatsApp</a>' : '') + '</div></div>';
+  h += '<div class="card"><h3>' + T('3. Нажми ссылку из ответа', '3. Tap the link I send back') + '</h3><span class="small muted">' + T('Подписка включится на этом телефоне.', 'The subscription turns on for this phone.') + '</span><input class="inp mono" id="actCode" placeholder="' + T('или вставь код активации сюда', 'or paste the activation code') + '"><button class="btn soft" data-a="activateManual">' + T('Активировать', 'Activate') + '</button></div>';
   h += '<span class="tiny muted pad4">' + T('Съёмки, люди и доход остаются у тебя и без подписки — без неё нельзя только создавать новые проекты.', 'Without a subscription you keep all your data — you just can’t create new projects.') + '</span></div>' + nav('');
   return h;
 }
@@ -519,7 +519,7 @@ function vWelcome() {
   if (o.step === 1) {
     h += '<div class="chips">' + chip('Русский', S.lang === 'ru', 'lang', 'ru', 'sm') + chip('English', S.lang === 'en', 'lang', 'en', 'sm') + '</div>';
     h += '<h1>' + T('Давай<br>знакомиться', 'Nice to<br>meet you') + '</h1><p class="muted" style="margin:0">' + T('Заполнишь один раз — дальше всё подставится само', 'Fill this in once — the rest fills itself in') + '</p>';
-    h += '<div class="grid2">' + field(T('Имя', 'Name'), inp('profile.name', p.name, { ph: T('Как к тебе обращаться', 'Your name') })) + field(T('Город', 'City'), inp('profile.city', p.city, { ph: T('Казань', 'City') })) + '</div>';
+    h += '<div class="grid2">' + field(T('Имя', 'Name'), inp('profile.name', p.name, { ph: T('Как к тебе обращаться', 'Your name') })) + field(T('Город', 'City'), inp('profile.city', p.city, { ph: T('Твой город', 'City') })) + '</div>';
     h += field(T('Номер телефона', 'Phone number'), '<input class="inp" type="tel" inputmode="tel" autocomplete="tel" data-b="profile.phone" value="' + esc(p.phone || '') + '" placeholder="+7 900 000-00-00">') + '<span class="tiny muted pad4" style="margin-top:-10px">' + PHONE_HINT() + ' ' + T('Нужен, чтобы подключить подписку и чтобы команда могла с тобой связаться.', 'Needed for the subscription and so the team can reach you.') + '</span>' +
       field(T('Ник в Telegram', 'Telegram username'), '<input class="inp" data-b="profile.tg" data-tg="1" autocapitalize="off" autocorrect="off" value="' + esc(p.tg || '') + '" placeholder="@nick">');
     h += '<h2 style="margin-top:6px">' + T('Кто ты на съёмке?', 'What do you do on set?') + '</h2><span class="small muted pad4">' + T('Можно несколько', 'Pick as many as you like') + '</span>';
@@ -542,7 +542,7 @@ function vWelcome() {
       const R = ROLE[r];
       h += '<div class="card glow-' + R.glow + '"><h3>' + esc(roleName(r)) + '</h3><div class="chips">' + R.skills.map((sk) => chip(skillName(sk), p.skills.includes(r + ':' + sk), 'toggleSkill', r + ':' + sk, 'sm')).join('') + '</div></div>';
     });
-    if (p.ownRole) h += '<div class="card"><h3>' + esc(p.ownRole) + '</h3>' + inp('profile.ownSkill', p.ownSkill, { ph: T('Что делаешь на съёмке? Например: свет для предметки', 'What do you do on set?') }) + '<span class="tiny muted">' + T('Новые роли мы смотрим и добавляем в общий список', 'We review new roles and add them for everyone') + '</span></div>';
+    if (p.ownRole) h += '<div class="card"><h3>' + esc(p.ownRole) + '</h3>' + inp('profile.ownSkill', p.ownSkill, { ph: T('Что делаешь на съёмке? Например: свет для предметки', 'What do you do on set?') }) + '<span class="tiny muted">' + T('Эта роль появится в твоей карточке', 'We review new roles and add them for everyone') + '</span></div>';
     if (!p.roles.length && !p.ownRole) h += '<div class="card">' + T('Вернись на шаг назад и выбери, кто ты на съёмке', 'Go back and pick your role') + '</div>';
     h += '<h3 class="pad4">' + T('Опыт', 'Experience') + '</h3><div class="chips">' + [T('до года', '< 1 year'), T('1–3 года', '1–3 years'), T('3+ лет', '3+ years')].map((x) => chip(x, p.exp === x, 'setProfile', 'exp|' + x)).join('') + '</div>';
   }
@@ -573,6 +573,16 @@ function vWelcome() {
 }
 
 /* --- today --- */
+function safetyCard() {
+  const u = navigator.userAgent; const ios = /iPhone|iPad|iPod/.test(u); const standalone = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || navigator.standalone;
+  if (ios && !standalone) return '<div class="card glow-lemon" style="gap:8px"><h3>' + T('Добавь SET на экран «Домой»', 'Add SET to your Home Screen') + '</h3><span class="small">' + T('Сейчас SET открыт в браузере. На iPhone браузер может сам стереть данные сайта, если его долго не открывать. С иконки на экране «Домой» данные хранятся надёжнее.', 'SET is open in the browser. On iPhone the browser can wipe site data. From the Home Screen icon your data is safer.') + '</span><span class="small muted">' + T('Safari → «Поделиться» → «На экран Домой». Потом открывай SET только с иконки.', 'Safari → Share → Add to Home Screen. Then open SET from the icon.') + '</span></div>';
+  const real = S.shoots.filter((x) => !x.demo).length;
+  if (!real) return '';
+  const since = S.lastBackup ? daysBetween(S.lastBackup, todayIso()) : null;
+  const snoozed = S.backupSnooze && daysBetween(S.backupSnooze, todayIso()) < 3;
+  if ((since === null || since >= 14) && !snoozed) return '<div class="card glow-lemon" style="gap:8px"><h3>' + T('Сохрани копию данных', 'Save a backup') + '</h3><span class="small">' + T('Всё хранится только в этом телефоне. Потеряешь телефон — потеряешь съёмки. Копия сохраняется файлом за пару секунд.', 'Everything lives only on this phone. A backup file takes seconds.') + '</span><span class="tiny muted">' + (since === null ? T('Копию ещё ни разу не сохраняли', 'No backup yet') : T('Последняя копия: ', 'Last backup: ') + relDay(S.lastBackup)) + '</span><div class="row"><button class="btn grow" data-a="exportJson">' + T('Сохранить копию', 'Save backup') + '</button><button class="btn ghost" data-a="backupLater">' + T('Позже', 'Later') + '</button></div></div>';
+  return '';
+}
 function vToday() {
   const t = todayIso();
   const up = S.shoots.filter((s) => s.date && s.date >= t && s.status !== 'done').sort(sortByDate);
@@ -583,6 +593,7 @@ function vToday() {
   h += '<div class="top"><span class="logo">set</span><div class="row"><a class="iconbtn" href="#/settings" aria-label="' + T('Настройки', 'Settings') + '">' + I.gear + '</a><a class="avatar" href="#/me" aria-label="' + T('Профиль и доход', 'Profile and income') + '">' + esc(initials(S.profile.name)) + '</a></div></div>';
   h += '<div class="col pad4" style="gap:4px"><span class="kicker">' + esc(WD_L[L()][d.getDay()]) + ', ' + fmtDate(t) + '</span><h1>' + (todays.length ? T('Сегодня<br>съёмка', 'Shoot<br>today') : (nextS ? T('Сегодня<br>спокойно', 'A calm<br>day') : T('Чистый<br>лист', 'A blank<br>page'))) + '</h1></div>';
   h += tip('today');
+  h += safetyCard();
   h += recapBanner();
   if (!S.shoots.length) {
     h += '<div class="card glow-pink" style="padding:22px"><h2>' + T('Первая съёмка', 'Your first shoot') + '</h2><span>' + T('Создай проект — тайминг, команда и образы соберутся в одном месте.', 'Create a project — schedule, team and looks in one place.') + '</span><a class="btn" href="#/new">' + T('Новая съёмка', 'New shoot') + '</a><button class="textbtn" data-a="demo">' + T('Сначала посмотреть на примере', 'Explore an example first') + '</button></div>';
@@ -643,7 +654,7 @@ function vNew() {
     h += '<div class="card tight">' + [['mood', T('Мудборд', 'Moodboard')], ['timing', T('Тайминг', 'Schedule')], ['team', T('Команда', 'Team')], ['looks', T('Образы', 'Looks')], ['budget', T('Смета', 'Budget')], ['print', T('Распечатка', 'Print sheet')]].map(([k, l]) => sw(l, '', m[k], 'toggleNewMod', k)).join('') + '</div>';
   }
   if (n) {
-    h += '<div class="card"><div class="grid2">' + field(n === 'personal' ? T('Клиент', 'Client') : n === 'creative' ? T('Название', 'Title') : T('Бренд / клиент', 'Brand / client'), '<input class="inp" id="nfClient" placeholder="' + (n === 'personal' ? T('Анна К.', 'Anna K.') : n === 'creative' ? 'TFP' : T('Марта', 'Brand')) + '">') + field(T('Что снимаем', 'What'), '<input class="inp" id="nfWhat" placeholder="' + (n === 'personal' ? T('портрет', 'portrait') : T('лукбук', 'lookbook')) + '">') + '</div>' +
+    h += '<div class="card"><div class="grid2">' + field(n === 'personal' ? T('Клиент', 'Client') : n === 'creative' ? T('Название', 'Title') : T('Бренд / клиент', 'Brand / client'), '<input class="inp" id="nfClient" placeholder="' + (n === 'personal' ? T('Имя клиента', 'Client name') : n === 'creative' ? 'TFP' : T('Название бренда', 'Brand')) + '">') + field(T('Что снимаем', 'What'), '<input class="inp" id="nfWhat" placeholder="' + (n === 'personal' ? T('например, портрет', 'e.g. portrait') : T('например, лукбук', 'e.g. lookbook')) + '">') + '</div>' +
       '<div class="grid2">' + field(T('Дата', 'Date'), '<input class="inp" type="date" id="nfDate">') + field(T('Сбор', 'Call time'), '<input class="inp mono" type="time" data-time="1" id="nfCall" value="">') + '</div></div>';
   }
   h += '</div><div class="cta nonav"><button class="btn big" data-a="createShoot"' + (n ? '' : ' disabled') + '>' + (n ? T('Создать', 'Create') : T('Выбери формат', 'Pick a format')) + '</button></div>';
@@ -713,7 +724,7 @@ function pTiming(s) {
     const p = b + '.timing:' + x.id;
     const open = ui.tlOpen === x.id;
     h += '<div class="tl">' + inp(p + '.t', x.t, { type: 'time', r: true, aria: T('Время', 'Time'), style: 'padding:0 8px;font-size:15px' }) + '<textarea class="inp tlw" rows="1" data-b="' + p + '.w" aria-label="' + T('Что происходит', 'What happens') + '">' + esc(x.w) + '</textarea><button class="textbtn" data-a="tlToggle" data-x="' + x.id + '" aria-expanded="' + open + '" aria-label="' + T('Подробнее', 'Details') + '">' + (open ? '▴' : '⋯') + '</button></div>';
-    if (open) h += '<div class="col" style="padding:0 0 10px 0;gap:6px"><div class="grid2">' + field(T('До', 'Until'), inp(p + '.t2', x.t2 || '', { type: 'time' })) + field(T('Кто', 'Who'), inp(p + '.who', x.who || '', { ph: T('визажисты, Альбина…', 'who') })) + '</div>' + field(T('Параллельно / детали', 'In parallel / details'), inp(p + '.det', x.det || '', { ph: T('что происходит одновременно', 'what happens at the same time') })) + '<button class="textbtn" style="align-self:flex-start;color:var(--red)" data-a="delRow" data-s="' + s.id + '" data-x="timing|' + x.id + '">' + T('Удалить строку', 'Delete row') + '</button></div>';
+    if (open) h += '<div class="col" style="padding:0 0 10px 0;gap:6px"><div class="grid2">' + field(T('До', 'Until'), inp(p + '.t2', x.t2 || '', { type: 'time' })) + field(T('Кто', 'Who'), inp(p + '.who', x.who || '', { ph: T('кто занят: визажист, свет…', 'who') })) + '</div>' + field(T('Параллельно / детали', 'In parallel / details'), inp(p + '.det', x.det || '', { ph: T('что происходит одновременно', 'what happens at the same time') })) + '<button class="textbtn" style="align-self:flex-start;color:var(--red)" data-a="delRow" data-s="' + s.id + '" data-x="timing|' + x.id + '">' + T('Удалить строку', 'Delete row') + '</button></div>';
     else if (x.t2 || x.who || x.det) h += '<div class="tiny muted" style="padding:0 0 10px 104px;margin-top:-4px">' + esc([x.t2 && T('до ', 'till ') + x.t2, x.who, x.det].filter(Boolean).join(' · ')) + '</div>';
   });
   if (!rows.length) h += '<div class="empty">' + T('Тайминг пустой — впиши свой по строчкам.', 'Empty — add your own rows.') + '</div>';
@@ -792,7 +803,7 @@ function pLooks(s) {
 function pBudget(s) {
   const t = budgetTotals(s);
   const row = (l, v, cls) => '<div class="row between small' + (cls ? ' ' + cls : '') + '"><span>' + l + '</span><b class="mono">' + v + '</b></div>';
-  let h = '<div class="card glow-pink" style="padding:22px;gap:8px"><span class="lock">' + I.lock + T('Видишь только ты и заказчик', 'Only you and the client') + '</span><span class="small">' + T('Итого деньгами', 'Total in money') + '</span><span class="mono" style="font-size:38px;letter-spacing:-0.02em;line-height:1.05">' + money(t.total) + ' ₽</span>' +
+  let h = '<div class="card glow-pink" style="padding:22px;gap:8px"><span class="lock">' + I.lock + T('Смету видишь только ты. Заказчик увидит её, только когда ты отправишь', 'Only you and the client') + '</span><span class="small">' + T('Итого деньгами', 'Total in money') + '</span><span class="mono" style="font-size:38px;letter-spacing:-0.02em;line-height:1.05">' + money(t.total) + ' ₽</span>' +
     row(T('Деньгами по строкам', 'Lines in money'), money(t.money) + ' ₽') +
     '<div class="row between small"><span class="row" style="gap:6px">' + T('Резерв', 'Contingency') + '<input class="inp mono" data-b="shoot:' + s.id + '.budget.reserve" data-r="1" inputmode="numeric" value="' + esc(s.budget.reserve) + '" style="width:64px;min-height:36px;padding:0 8px;font-size:14px" aria-label="' + T('Резерв, %', 'Contingency %') + '">%</span><b class="mono">' + money(t.reserve) + ' ₽</b></div>' +
     (t.barter ? row(T('Бартером и сертификатами', 'In barter and vouchers'), money(t.barter) + ' ₽') : '') +
@@ -808,7 +819,7 @@ function pBudget(s) {
   });
   h += '<div class="seg">' + SECTIONS.map(([k]) => '<button class="chip sm" data-a="addLine" data-s="' + s.id + '" data-x="' + k + '">+ ' + esc(secName(k)) + '</button>').join('') + '</div>';
   h += '<div class="grid2"><button class="btn soft" data-a="syncTeam" data-s="' + s.id + '">' + T('Подтянуть команду', 'Pull in the team') + '</button><button class="btn soft" data-a="shareBudget" data-s="' + s.id + '">' + T('Заказчику', 'To client') + '</button></div><button class="btn ghost" data-a="budgetCsv" data-s="' + s.id + '">' + T('Таблица CSV — открыть в Excel', 'CSV for Excel') + '</button>';
-  h += '<div class="card">' + field(T('Условия и комментарии', 'Terms and notes'), '<textarea class="inp" data-b="shoot:' + s.id + '.budget.note" placeholder="' + T('Предоплата 50%, остаток в день съёмки. Переработка — по часам. Закуп вернётся в течение 7 дней.', '50% upfront, balance on the day.') + '">' + esc(s.budget.note) + '</textarea>') + '</div>';
+  h += '<div class="card">' + field(T('Условия и комментарии', 'Terms and notes'), '<textarea class="inp" data-b="shoot:' + s.id + '.budget.note" placeholder="' + T('Например: предоплата 50%, остаток в день съёмки, переработка — по часам', '50% upfront, balance on the day.') + '">' + esc(s.budget.note) + '</textarea>') + '</div>';
   return h;
 }
 function printHtml(s) {
@@ -863,7 +874,7 @@ function vOnSet(id) {
     const nx = left[1];
     if (nx) h += '<span class="small pad4" style="color:#9A968C">' + T('Следом: ', 'Then: ') + esc(nx.name || T('образ ', 'look ') + pad(looks.indexOf(nx) + 1)) + (nx.model ? ' · ' + esc(nx.model) + T(' — пора на грим', ' — to make-up') : '') + '</span>';
   } else if (looks.length) {
-    h += '<div style="background:#ECE97E;color:var(--ink);border-radius:28px;padding:24px;display:flex;flex-direction:column;gap:10px"><span class="h1" style="font-size:44px">' + T('Снято!', 'That’s a wrap!') + '</span><span>' + T('Все образы сняты. Вещи — по списку возврата.', 'All looks shot. Pack and return the clothes.') + '</span><a class="btn" href="#/p/' + s.id + '/wrap">' + T('Что дальше', 'What’s next') + '</a></div>';
+    h += '<div style="background:#ECE97E;color:var(--ink);border-radius:28px;padding:24px;display:flex;flex-direction:column;gap:10px"><span class="h1" style="font-size:44px">' + T('Снято!', 'That’s a wrap!') + '</span><span>' + T('Все образы сняты. Не забудь вернуть вещи, взятые с возвратом.', 'All looks shot. Pack and return the clothes.') + '</span><a class="btn" href="#/p/' + s.id + '/wrap">' + T('Что дальше', 'What’s next') + '</a></div>';
   }
   h += nudgeHtml;
   if (looks.length) h += '<div class="card tight" style="background:#232328">' + looks.map((l, i) => '<button class="li" data-a="toggleLook" data-s="' + s.id + '" data-x="' + l.id + '" style="color:#fff"><span class="check ' + (l.done ? 'on' : '') + '">' + (l.done ? '✓' : '') + '</span><span class="grow ' + (l.done ? 'strike' : '') + '">' + pad(i + 1) + ' · ' + esc(l.name || '') + (l.model ? ' · ' + esc(l.model) : '') + '</span></button>').join('') + '</div>';
@@ -1060,7 +1071,7 @@ function vMe() {
     (noCheck.length ? '<span class="small">' + T('Чек в «Мой налог» не выбит: ', 'No receipt yet: ') + esc(noCheck.map((s) => s.client || titleOf(s)).join(', ')) + '</span>' : '') + '</div>';
   if (list.length) h += '<button class="btn big" data-a="openRecap" data-x="' + (ui.per === 'month' ? 'm0' : 'y0') + '">' + T('Поделиться итогами', 'Share my recap') + ' ↗</button>';
   if (mk.length) h += '<div class="card bars"><span class="tiny muted">' + T('По месяцам, ₽', 'By month') + '</span>' + mk.map((k) => '<div style="display:grid;grid-template-columns:62px minmax(0,1fr) 78px;gap:10px;align-items:center" class="small"><span>' + esc(MON_S[L()][Number(k.slice(5)) - 1] + ' ' + k.slice(2, 4)) + '</span><span class="bar"><i style="width:' + Math.round(months[k] / max * 100) + '%"></i></span><span class="mono" style="text-align:right">' + money(months[k]) + '</span></div>').join('') + '</div>';
-  h += '<div class="chips">' + chip(T('Все', 'All'), ui.src === 'all', 'setUi', 'src|all', 'sm') + chip(T('Через SET', 'Via SET'), ui.src === 'set', 'setUi', 'src|set', 'sm') + chip(T('Мои вручную', 'Added by me'), ui.src === 'own', 'setUi', 'src|own', 'sm') + '</div>';
+  h += '<div class="chips">' + chip(T('Все', 'All'), ui.src === 'all', 'setUi', 'src|all', 'sm') + chip(T('Через SET', 'Via SET'), ui.src === 'set', 'setUi', 'src|set', 'sm') + chip(T('Свои', 'Added by me'), ui.src === 'own', 'setUi', 'src|own', 'sm') + '</div>';
   if (!shown.length) h += '<div class="empty">' + T('Прошедшие съёмки появятся здесь. Свои — добавь в календаре.', 'Past shoots appear here. Add your own in the calendar.') + '</div>';
   shown.forEach((s) => {
     const d = parseIso(s.date); const fee = myMoney(s); const br = myBarter(s); const tfp = s.my.pay === 'tfp' || (s.my.fee !== '' && fee === 0 && !br);
@@ -1081,7 +1092,7 @@ function vSettings() {
   h += '<div class="card tight">' + sw(T('Подсказки-обучалки', 'Coaching tips'), T('короткие подсказки на каждом экране', 'short tips on each screen'), !S.tipsOff, 'toggleTips', '') + '</div>' + (S.seenTips && Object.keys(S.seenTips).length && !S.tipsOff ? '<button class="textbtn" style="align-self:flex-start" data-a="resetTips">' + T('Показать подсказки заново', 'Show tips again') + '</button>' : '');
   h += '<div class="card glow-teal"><h3>' + T('Как поставить на телефон', 'Install on your phone') + '</h3><span class="small">' + T('iPhone: в Safari нажми «Поделиться» → «На экран Домой». Android: в Chrome меню ⋮ → «Добавить на главный экран». SET откроется как приложение и будет работать без интернета.', 'iPhone: in Safari tap Share → Add to Home Screen. Android: Chrome menu ⋮ → Add to Home screen.') + '</span></div>';
   h += '<a class="card glow-pink" href="#/pro" style="text-decoration:none;color:inherit"><h3>' + T('Подписка', 'Subscription') + '</h3><span class="small">' + esc(subStatusText()) + '</span></a>';
-  h += '<div class="card"><h3>' + T('Резервная копия', 'Backup') + '</h3><span class="small muted">' + T('Все данные хранятся только в этом телефоне. Сохраняй копию раз в неделю — и перед сменой телефона.', 'Your data lives only on this device. Save a backup weekly.') + '</span><div class="grid2"><button class="btn soft" data-a="exportJson">' + T('Сохранить копию', 'Save backup') + '</button><button class="btn soft" data-a="importJson">' + T('Загрузить копию', 'Restore') + '</button></div></div>';
+  h += '<div class="card"><h3>' + T('Резервная копия', 'Backup') + '</h3><span class="small muted">' + (S.lastBackup ? T('Последняя копия: ', 'Last backup: ') + relDay(S.lastBackup) + '. ' : T('Копию ещё не сохраняли. ', 'No backup yet. ')) + T('Все данные хранятся только в этом телефоне. Сохраняй копию раз в неделю — и перед сменой телефона.', 'Your data lives only on this device. Save a backup weekly.') + '</span><div class="grid2"><button class="btn soft" data-a="exportJson">' + T('Сохранить копию', 'Save backup') + '</button><button class="btn soft" data-a="importJson">' + T('Загрузить копию', 'Restore') + '</button></div></div>';
   h += '<div class="card"><h3>' + T('Пример', 'Example') + '</h3><span class="small muted">' + T('Добавит съёмку для бренда, TFP, частного клиента и пару прошедших — чтобы всё потрогать.', 'Adds sample shoots to explore.') + '</span><button class="btn soft" data-a="demo">' + T('Добавить пример', 'Add example') + '</button></div>';
   h += '<div class="card"><h3>' + T('Начать с чистого листа', 'Start over') + '</h3><button class="btn danger" data-a="wipe">' + T('Удалить все данные', 'Delete all data') + '</button></div>';
   h += '<span class="tiny muted pad4">SET ' + VERSION + ' · ' + T('бета: данные только на этом устройстве', 'beta: data on this device only') + '</span></div>' + nav('');
@@ -1100,7 +1111,7 @@ function vSheet() {
   if (sh.type === 'member') {
     const s = getShoot(sh.s); const m = sh.data;
     h += '<div class="row between"><h2>' + (sh.isNew ? T('Новый человек', 'New person') : T('В команде', 'Team member')) + '</h2><button class="iconbtn" data-a="closeSheet" aria-label="' + T('Закрыть', 'Close') + '">' + I.x + '</button></div>' +
-      field(T('Имя', 'Name'), '<input class="inp" id="mName" value="' + esc(m.name) + '" placeholder="' + T('Карина', 'Name') + '">') + field(T('Роль на этой съёмке', 'Role on this shoot'), roleSelect('', m.role).replace('data-b=""', 'id="mRole"')) +
+      field(T('Имя', 'Name'), '<input class="inp" id="mName" value="' + esc(m.name) + '" placeholder="' + T('Имя', 'Name') + '">') + field(T('Роль на этой съёмке', 'Role on this shoot'), roleSelect('', m.role).replace('data-b=""', 'id="mRole"')) +
       field(T('Сбор', 'Call'), '<input class="inp mono" type="time" data-time="1" id="mCall" value="' + esc(m.call || s.call) + '">') +
       '<div class="col"><span class="tiny muted">' + T('Как платим', 'Payment') + '</span><div class="chips">' + ['money', 'barter', 'cert', 'mix', 'tfp', 'client'].map((k) => '<button class="chip sm" data-a="memberPay" data-x="' + k + '" aria-pressed="' + ((m.pay || 'money') === k) + '">' + esc(payName(k)) + '</button>').join('') + '</div></div>' +
       (['money', 'mix'].includes(m.pay || 'money') ? '<div class="grid2">' + field(T('Ставка, ₽', 'Rate'), '<input class="inp mono" inputmode="numeric" id="mRate" value="' + esc(m.rate) + '">') + field(T('За', 'Per'), '<select class="inp" id="mUnit">' + UNITS.map((u) => '<option value="' + u[0] + '"' + ((m.unit || 'смена') === u[0] ? ' selected' : '') + '>' + esc(L() === 'en' ? u[1] : u[0]) + '</option>').join('') + '</select>') + '</div>' : '') +
@@ -1343,18 +1354,18 @@ const A = {
   toggleNewMod: (el) => { ui.newMods[el.dataset.x] = !ui.newMods[el.dataset.x]; render(); },
   toggleCheck: (el) => { const s = getShoot(el.dataset.s); const c = s.checklist.find((x) => x.id === el.dataset.x); c.done = !c.done; save(); render(); },
   addCheck: (el) => { const s = getShoot(el.dataset.s); const v = $('#newCheck').value.trim(); if (!v) return; s.checklist.push({ id: uid(), text: v, done: false }); save(); render(); $('#newCheck')?.focus(); },
-  delRow: (el) => { const s = getShoot(el.dataset.s); const [arr, id] = el.dataset.x.split('|'); if (arr === 'looks' && !confirm(T('Удалить образ?', 'Delete this look?'))) return; if (arr === 'looks') { const l = s.looks.find((x) => x.id === id); if (l) lookPics(l).forEach(mDel); } s[arr] = s[arr].filter((x) => x.id !== id); save(); render(); },
+  delRow: async (el) => { const s = getShoot(el.dataset.s); const [arr, id] = el.dataset.x.split('|'); if (arr === 'looks' && !await askConfirm(T('Удалить образ?', 'Delete this look?'))) return; if (arr === 'looks') { const l = s.looks.find((x) => x.id === id); if (l) lookPics(l).forEach(mDel); } s[arr] = s[arr].filter((x) => x.id !== id); save(); render(); },
   useTemplate: (el) => { const s = getShoot(el.dataset.s); s.timing = genTiming(s); save(); render(); },
   tlToggle: (el) => { ui.tlOpen = ui.tlOpen === el.dataset.x ? null : el.dataset.x; render(); },
-  clearTiming: (el) => { if (!confirm(T('Удалить все строки тайминга?', 'Clear the whole schedule?'))) return; const s = getShoot(el.dataset.s); s.timing = []; save(); render(); },
+  clearTiming: async (el) => { if (!await askConfirm(T('Удалить все строки тайминга?', 'Clear the whole schedule?'))) return; const s = getShoot(el.dataset.s); s.timing = []; save(); render(); },
   addTiming: (el) => { const s = getShoot(el.dataset.s); const all = sortedTiming(s); const last = all[all.length - 1]; s.timing.push({ id: uid(), t: last && last.t2 ? last.t2 : '', w: '' }); save(); render(); },
   addLunch: (el) => { const s = getShoot(el.dataset.s); const a = mins(s.call) ?? 600; const d = durationH(s) * 60 || 480; const m = (Math.round((a + d / 2) / 30) * 30) % 1440; s.timing.push({ id: uid(), t: pad(Math.floor(m / 60)) + ':' + pad(m % 60), w: T('Обед для команды', 'Team lunch') }); const f = teamFood(s); save(); toast(T('Обед добавлен в тайминг', 'Lunch added') + (f ? ' · ' + f : '')); render(); },
   tab: (el) => { location.hash = '#/p/' + el.dataset.s + '/' + (el.dataset.x || 'main'); },
-  shareTeam: async (el) => { const s = getShoot(el.dataset.s); const link = await shareLink(s, ''); shareSheet(T('Команде', 'To the team'), teamText(s) + '\n\n' + T('Проект целиком — сохрани в SET, там всегда свежая версия:', 'The whole project — save it in SET:') + '\n' + link); },
+  shareTeam: async (el) => { const s = getShoot(el.dataset.s); const link = await shareLink(s, ''); shareSheet(T('Команде', 'To the team'), teamText(s) + '\n\n' + T('Проект целиком — открой и сохрани у себя в SET:', 'The whole project — save it in SET:') + '\n' + link); },
   shareClientGuide: (el) => { const s = getShoot(el.dataset.s); const c = s.checklist.find((x) => /памятка|guide/i.test(x.text)); if (c) { c.done = true; save(); } shareSheet(T('Памятка клиенту', 'Client guide'), guideText(s)); },
   invitePerson: async (el) => { const s = getShoot(el.dataset.s); const m = s.team.find((x) => x.id === el.dataset.x); if (!m.status) { m.status = 'asked'; save(); } const link = await shareLink(s, m.id); ui.sheet = { type: 'share', title: m.name, text: personText(s, m) + '\n\n' + T('Тайминг, адрес и твой образ — в SET:', 'Schedule, address and your look — in SET:') + '\n' + link, phone: S.people.find((p) => p.id === m.pid)?.phone }; render(); },
   pasteJoin: () => { const v = ($('#joinPaste')?.value || '').trim(); const i = v.indexOf('#/join/'); if (i < 0) { toast(T('Это не ссылка на проект SET', 'This is not a SET project link')); return; } joinFrom(v.slice(i + 7)); },
-  guestDelete: (el) => { if (!confirm(T('Убрать этот проект у себя? У продюсера он останется.', 'Remove this project from your SET? The producer keeps it.'))) return; S.shoots = S.shoots.filter((x) => x.id !== el.dataset.s); save(); location.hash = '#/projects'; },
+  guestDelete: async (el) => { if (!await askConfirm(T('Убрать этот проект у себя? У продюсера он останется.', 'Remove this project from your SET? The producer keeps it.'))) return; S.shoots = S.shoots.filter((x) => x.id !== el.dataset.s); save(); location.hash = '#/projects'; },
   shareTo: async (el) => {
     const text = $('#shareText')?.value || ui.sheet.text; const k = el.dataset.x;
     if (k === 'copy') return copy(text);
@@ -1372,6 +1383,7 @@ const A = {
     if (navigator.canShare && navigator.canShare({ files: [rcFile] })) { try { await navigator.share({ files: [rcFile] }); } catch (e) { /* cancelled */ } return; }
     rcDownload(); toast(T('Картинка сохранена — выложи её в сторис', 'Saved — post it to your story'));
   },
+  backupLater: () => { S.backupSnooze = todayIso(); save(); render(); },
   supportMsg: (el) => { ui.sheet = { type: 'support', text: supportText(el.dataset.x) }; render(); setTimeout(() => { const t = $('#supText'); if (t) { t.focus(); } }, 60); },
   supportSend: async (el) => { const t = ($('#supText')?.value || '').trim(); const k = el.dataset.x; let copied = false; try { await navigator.clipboard.writeText(t); copied = true; } catch (e) { /* no clipboard */ }
     if (k === 'tg' && SUB.tg) { window.open('https://t.me/' + SUB.tg, '_blank'); toast(copied ? T('Текст скопирован — вставь его в чат', 'Copied — paste it in the chat') : T('Скопируй текст вручную', 'Copy the text manually')); return; }
@@ -1403,7 +1415,7 @@ const A = {
     if (sh.isNew) S.people.push(d); else { const i = S.people.findIndex((x) => x.id === d.id); S.people[i] = d; S.shoots.forEach((s) => s.team.forEach((m) => { if (m.pid === d.id) m.name = d.name; })); }
     ui.sheet = null; save(); render();
   },
-  deletePerson: () => { if (!confirm(T('Удалить из базы? Из прошлых проектов человек не пропадёт.', 'Delete? Past projects keep the name.'))) return; S.people = S.people.filter((x) => x.id !== ui.sheet.data.id); ui.sheet = null; save(); render(); },
+  deletePerson: async () => { if (!await askConfirm(T('Удалить из базы? Из прошлых проектов человек не пропадёт.', 'Delete? Past projects keep the name.'))) return; S.people = S.people.filter((x) => x.id !== ui.sheet.data.id); ui.sheet = null; save(); render(); },
   copyText: (el) => copy(el.dataset.x),
   tipOk: (el) => { S.seenTips = S.seenTips || {}; S.seenTips[el.dataset.x] = true; save(); render(); },
   toggleTips: () => { S.tipsOff = !S.tipsOff; save(); render(); },
@@ -1420,7 +1432,7 @@ const A = {
   lfToggle: (el) => { const s = getShoot(el.dataset.s); if (!s.lf) { s.lf = {}; LOOK_F.forEach((f) => { s.lf[f[0]] = lfOn(s, f[0]); }); } s.lf[el.dataset.x] = !s.lf[el.dataset.x]; save(); render(); },
   outMode: (el) => makeOut(ui.sheet.s, el.dataset.x),
   delLookImg: (el) => { const s = getShoot(el.dataset.s); const [id, key = 'img'] = el.dataset.x.split('|'); const l = s.looks.find((x) => x.id === id); if (l && l[key]) { mDel(l[key]); l[key] = ''; save(); render(); } },
-  addMoodLink: (el) => { const u = prompt(T('Ссылка на Pinterest, Instagram или папку', 'Link to Pinterest, Instagram or a folder')); if (!u || !u.trim()) return; const s = getShoot(el.dataset.s); s.mood = s.mood || []; s.mood.push({ id: uid(), kind: 'link', url: u.trim() }); save(); render(); },
+  addMoodLink: async (el) => { const u = await askText(T('Ссылка на мудборд', 'Moodboard link'), T('Pinterest, Instagram или папка с фото', 'Pinterest, Instagram or a photo folder')); if (!u || !u.trim()) return; const s = getShoot(el.dataset.s); s.mood = s.mood || []; s.mood.push({ id: uid(), kind: 'link', url: u.trim() }); save(); render(); },
   delMood: (el) => { const s = getShoot(el.dataset.s); const it = (s.mood || []).find((x) => x.id === el.dataset.x); if (it && it.kind === 'img') mDel(it.id); s.mood = (s.mood || []).filter((x) => x.id !== el.dataset.x); ui.sheet = null; save(); render(); },
   viewImg: (el) => { ui.sheet = { type: 'img', s: el.dataset.s, id: el.dataset.x }; render(); },
   shareMood: async (el) => {
@@ -1473,7 +1485,7 @@ const A = {
   reopen: (el) => { const s = getShoot(el.dataset.s); s.status = 'plan'; save(); render(); },
   shootMenu: (el) => { ui.sheet = { type: 'menu', s: el.dataset.s }; render(); },
   dupShoot: () => { if (!canCreate()) { ui.sheet = null; location.hash = '#/pro'; return; } const s = getShoot(ui.sheet.s); const c = JSON.parse(JSON.stringify(s)); c.id = uid(); c.date = ''; c.status = 'plan'; c.what = (c.what || '') + T(' (копия)', ' (copy)'); c.team.forEach((m) => { m.id = uid(); m.status = ''; m.paid = false; }); c.looks.forEach((l) => { l.id = uid(); l.done = false; }); c.checklist.forEach((x) => { x.id = uid(); x.done = false; }); c.my = { ...c.my, paid: false, check: false, fee: '' }; delete c.demo; if (!isPro()) S.freeUsed = true; S.shoots.push(c); ui.sheet = null; save(); location.hash = '#/p/' + c.id; },
-  deleteShoot: () => { if (!confirm(T('Удалить съёмку целиком?', 'Delete this shoot?'))) return; S.shoots = S.shoots.filter((x) => x.id !== ui.sheet.s); ui.sheet = null; save(); location.hash = '#/projects'; },
+  deleteShoot: async () => { if (!await askConfirm(T('Удалить съёмку целиком?', 'Delete this shoot?'))) return; S.shoots = S.shoots.filter((x) => x.id !== ui.sheet.s); ui.sheet = null; save(); location.hash = '#/projects'; },
   calMove: (el) => { const c = ui.cal; c.m += Number(el.dataset.x); if (c.m < 0) { c.m = 11; c.y--; } if (c.m > 11) { c.m = 0; c.y++; } ui.calSel = null; render(); },
   calPick: (el) => { ui.calSel = el.dataset.x && ui.calSel !== el.dataset.x ? el.dataset.x : null; render(); },
   ownSheet: (el) => { const s = newShoot('custom', { src: 'own', date: el.dataset.x || todayIso(), call: '', end: '', modules: { team: false, timing: false, looks: false, budget: false, print: false } }); s.my.fee = ''; ui.sheet = { type: 'own', data: s, isNew: true }; render(); },
@@ -1488,7 +1500,7 @@ const A = {
     if (i >= 0) S.shoots[i] = d; else S.shoots.push(d);
     save(); toast(T('Сохранено', 'Saved')); closeSheet();
   },
-  deleteOwn: () => { if (!confirm(T('Удалить эту съёмку?', 'Delete this shoot?'))) return; S.shoots = S.shoots.filter((x) => x.id !== ui.sheet.data.id); save(); closeSheet(); },
+  deleteOwn: async () => { if (!await askConfirm(T('Удалить эту съёмку?', 'Delete this shoot?'))) return; S.shoots = S.shoots.filter((x) => x.id !== ui.sheet.data.id); save(); closeSheet(); },
   exportCsv: () => {
     const rows = [[T('Дата', 'Date'), T('Съёмка', 'Shoot'), T('Роль', 'Role'), T('Смен', 'Shifts'), T('Сумма', 'Amount'), T('Оплачено', 'Paid'), T('Чек', 'Receipt'), T('Источник', 'Source'), T('Заметка', 'Note')]];
     myEntries().forEach((s) => rows.push([s.date, titleOf(s), roleName(s.my.role), s.my.shifts, myMoney(s) + (myBarter(s) ? ' + ' + payName(s.my.pay) + ' ' + myBarter(s) : ''), s.my.paid ? 1 : 0, s.my.check ? 1 : 0, s.src === 'own' ? 'own' : 'SET', s.my.note || '']));
@@ -1496,13 +1508,14 @@ const A = {
     download('set-income-' + todayIso() + '.csv', csv, 'text/csv');
   },
   exportJson: async () => {
+    S.lastBackup = todayIso(); S.backupSnooze = ''; save();
     toast(T('Собираю копию…', 'Preparing backup…'));
     const ids = []; S.shoots.forEach((s) => { (s.mood || []).forEach((x) => { if (x.kind === 'img') ids.push(x.id); }); s.looks.forEach((l) => { lookPics(l).forEach((x) => ids.push(x)); }); });
     const media = {}; for (const id of ids) { const b = await mGet(id); if (b) media[id] = await new Promise((r) => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.readAsDataURL(b); }); }
     download('set-backup-' + todayIso() + '.json', JSON.stringify({ ...S, media }), 'application/json');
   },
   importJson: () => $('#importFile').click(),
-  wipe: () => { if (!confirm(T('Точно удалить все съёмки, людей и профиль? Это нельзя отменить.', 'Delete everything? This cannot be undone.'))) return; const keepDev = S.deviceId, keepPro = S.pro; localStorage.removeItem(KEY); S = fresh(); S.deviceId = keepDev; S.pro = keepPro; S.firstRun = todayIso(); S.freeUsed = true; ui.onb = null; location.hash = '#/welcome'; render(); }
+  wipe: async () => { if (!await askConfirm(T('Точно удалить все съёмки, людей и профиль? Это нельзя отменить.', 'Delete everything? This cannot be undone.'))) return; const keepDev = S.deviceId, keepPro = S.pro; localStorage.removeItem(KEY); S = fresh(); S.deviceId = keepDev; S.pro = keepPro; S.firstRun = todayIso(); S.freeUsed = true; ui.onb = null; location.hash = '#/welcome'; render(); }
 };
 function closeSheet() { if (ui.sheet && ui.sheet.urls) ui.sheet.urls.forEach((u) => URL.revokeObjectURL(u)); ui.sheet = null; if (location.hash.startsWith('#/own')) location.hash = '#/calendar'; else render(); }
 function pickFiles(multi) { const i = document.createElement('input'); i.type = 'file'; i.accept = 'image/*'; if (multi) i.multiple = true; i.style.display = 'none'; document.body.appendChild(i); i.addEventListener('change', () => { onMediaFiles([...i.files]); i.remove(); }); i.click(); }
@@ -1740,9 +1753,26 @@ function vHelp() {
 }
 function supportText(kind) {
   const head = { bug: T('Что-то сломалось в SET', 'Something broke in SET'), idea: T('Идея для SET', 'Idea for SET'), ask: T('Вопрос про SET', 'Question about SET') }[kind] || 'SET';
-  const body = { bug: T('Что делала:\n\nЧто случилось:\n\nЧто ожидала:\n', 'What I did:\n\nWhat happened:\n\nWhat I expected:\n'), idea: T('Чего не хватает:\n\nКак это помогло бы на съёмке:\n', 'What is missing:\n\nHow it would help:\n'), ask: '' }[kind] || '';
+  const body = { bug: T('Что произошло:\n\nНа каком экране:\n\nКак должно было быть:\n', 'What happened:\n\nWhich screen:\n\nWhat should have happened:\n'), idea: T('Чего не хватает:\n\nКак это помогло бы на съёмке:\n', 'What is missing:\n\nHow it would help:\n'), ask: '' }[kind] || '';
   return head + '\n\n' + body + '\n— ' + deviceInfo() + (S.profile.name ? ' · ' + S.profile.name : '');
 }
+
+
+/* --- in-app dialogs (native confirm/prompt are unreliable inside app wrappers) --- */
+function dlg(html, onReady) {
+  return new Promise((resolve) => {
+    const bg = document.createElement('div'); bg.className = 'sheet-bg'; bg.style.zIndex = '1000'; bg.style.alignItems = 'center';
+    bg.innerHTML = '<div class="sheet" role="alertdialog" aria-modal="true" style="max-width:420px;margin:auto;border-radius:28px">' + html + '</div>';
+    const done = (v) => { bg.remove(); document.removeEventListener('keydown', key); resolve(v); };
+    const key = (e) => { if (e.key === 'Escape') done(null); };
+    bg.addEventListener('click', (e) => { const b = e.target.closest('[data-dlg]'); if (b) { e.preventDefault(); e.stopPropagation(); const v = b.dataset.dlg; if (v === 'ok') done(onReady ? onReady(bg) : true); else done(null); } else if (e.target === bg) done(null); });
+    document.addEventListener('keydown', key); document.body.appendChild(bg);
+    setTimeout(() => { (bg.querySelector('input') || bg.querySelector('[data-dlg="ok"]'))?.focus(); }, 30);
+    const inp = bg.querySelector('input'); if (inp) inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); done(onReady(bg)); } });
+  });
+}
+const askConfirm = (text, ok) => dlg('<h3 style="margin:0">' + esc(text) + '</h3><div class="grid2"><button class="btn ghost" data-dlg="no">' + T('Отмена', 'Cancel') + '</button><button class="btn ' + (/удал|убрать|стереть|delete|remove|clear/i.test(text) ? 'danger' : '') + '" data-dlg="ok">' + esc(ok || (/убрать/i.test(text) ? T('Убрать', 'Remove') : /удал|стереть/i.test(text) ? T('Удалить', 'Delete') : /заменить/i.test(text) ? T('Заменить', 'Replace') : T('Да', 'Yes'))) + '</button></div>').then((v) => v === true);
+const askText = (label, ph) => dlg('<h3 style="margin:0">' + esc(label) + '</h3><input class="inp" placeholder="' + esc(ph || '') + '" autocapitalize="off"><div class="grid2"><button class="btn ghost" data-dlg="no">' + T('Отмена', 'Cancel') + '</button><button class="btn" data-dlg="ok">' + T('Добавить', 'Add') + '</button></div>', (bg) => bg.querySelector('input').value);
 
 /* ---------- demo ---------- */
 function loadDemo() {
@@ -1850,12 +1880,13 @@ document.addEventListener('keydown', (ev) => {
 $('#importFile').addEventListener('change', (ev) => {
   const f = ev.target.files[0]; if (!f) return;
   const r = new FileReader();
-  r.onload = () => { try { const x = JSON.parse(r.result); if (x.v !== 1 || !Array.isArray(x.shoots)) throw new Error('bad'); if (!confirm(T('Заменить текущие данные копией?', 'Replace current data with the backup?'))) return; const media = x.media || {}; delete x.media; S = Object.assign(fresh(), x); S.shoots.forEach(migrate); save(); Object.keys(media).forEach(async (id) => { const b = await (await fetch(media[id])).blob(); await mPut(id, b); }); toast(T('Копия загружена', 'Backup restored')); location.hash = '#/today'; render(); } catch (e) { toast(T('Это не похоже на копию SET', 'This is not a SET backup')); } };
+  r.onload = async () => { try { const x = JSON.parse(r.result); if (x.v !== 1 || !Array.isArray(x.shoots)) throw new Error('bad'); if (!await askConfirm(T('Заменить текущие данные копией?', 'Replace current data with the backup?'))) return; const media = x.media || {}; delete x.media; S = Object.assign(fresh(), x); S.shoots.forEach(migrate); save(); Object.keys(media).forEach(async (id) => { const b = await (await fetch(media[id])).blob(); await mPut(id, b); }); toast(T('Копия загружена', 'Backup restored')); location.hash = '#/today'; render(); } catch (e) { toast(T('Это не похоже на копию SET', 'This is not a SET backup')); } };
   r.readAsText(f); ev.target.value = '';
 });
 window.addEventListener('hashchange', () => { if (!location.hash.startsWith('#/own')) ui.sheet = null; render(); });
 if (!S.deviceId) { const a = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; const r = crypto.getRandomValues(new Uint8Array(8)); S.deviceId = [...r].map((x) => a[x % a.length]).join('').replace(/(.{4})/, '$1-'); save(); }
 if (!S.firstRun) { S.firstRun = todayIso(); save(); }
+if (navigator.storage && navigator.storage.persist) navigator.storage.persisted().then((p) => { if (!p) navigator.storage.persist().catch(() => {}); }).catch(() => {});
 if (S.freeUsed == null) { S.freeUsed = S.shoots.some((x) => x.src === 'set' && !x.demo); save(); }
 document.documentElement.lang = S.lang;
 render();
