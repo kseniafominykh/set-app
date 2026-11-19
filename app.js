@@ -603,7 +603,7 @@ function vToday() {
   if (up.length > 1) {
     h += '<h3 class="pad4">' + T('Дальше', 'Coming up') + '</h3><div class="card tight">' + up.slice(nextS && nextS.date !== t ? 1 : 0).filter((s) => s.date !== t).slice(0, 5).map((s) => '<a class="li" href="' + (s.src === 'own' ? '#/own/' : '#/p/') + s.id + '"><span class="mono small" style="min-width:58px">' + esc(fmtDate(s.date).replace(/ \d{4}$/, '')) + '</span><span class="grow"><b style="font-weight:600">' + esc(titleOf(s)) + '</b><br><span class="tiny muted">' + T('сбор', 'call') + ' ' + esc(s.call) + '</span></span>' + I.next.replace('<svg', '<svg width="18" height="18"') + '</a>').join('') + '</div>';
   }
-  h += '<a class="tiny muted pad4" href="#/help" style="align-self:center;text-decoration:underline;margin-top:4px">' + T('Нужна помощь? Напиши нам', 'Need help? Write to us') + '</a>';
+  h += '<a class="tiny muted pad4" href="#/help" style="align-self:center;text-decoration:underline;margin-top:4px;min-height:44px;display:inline-flex;align-items:center;padding:0 12px">' + T('Нужна помощь? Напиши нам', 'Need help? Write to us') + '</a>';
   h += '</div>' + nav('today');
   return h;
 }
