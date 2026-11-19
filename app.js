@@ -1,6 +1,6 @@
 'use strict';
 /* SET — beta. All data lives on this device (localStorage). */
-const VERSION = '0.13.0 beta';
+const VERSION = '0.13.1 beta';
 const APP_URL = (location.host + location.pathname).replace(/index\.html$/, '').replace(/\/$/, '');
 const KEY = 'set.v1';
 
@@ -749,7 +749,7 @@ const LOOK_F = [
   ['makeup', 'Мейк', 'Make-up', 1], ['mua', 'Визажист', 'Make-up artist', 1], ['hair', 'Волосы', 'Hair', 1], ['hairby', 'Кто делает волосы', 'Hair by', 0],
   ['shots', 'Шот-лист', 'Shot list', 0], ['comment', 'Комментарий', 'Comment', 1], ['note', 'Важно (красным)', 'Important (in red)', 0],
   ['time', 'Время', 'Time', 0], ['name', 'Название образа', 'Look name', 0], ['ref', 'Ссылка на референс', 'Reference link', 0]];
-function lookPics(l) { if (!Array.isArray(l.photos)) { l.photos = [l.mimg, l.img, ...(l.pics || [])].filter(Boolean); delete l.mimg; delete l.img; delete l.pics; } return l.photos; }
+function lookPics(l) { if (!l.caps || typeof l.caps !== 'object') l.caps = {}; if (!Array.isArray(l.photos)) { l.photos = [l.mimg, l.img, ...(l.pics || [])].filter(Boolean); delete l.mimg; delete l.img; delete l.pics; } return l.photos; }
 const LOOK_MAX = 8;
 const lfHas = (s, k) => (s.looks || []).some((l) => k === 'photos' ? lookPics(l).length : String(l[k] || '').trim());
 function lfOn(s, k) { if (s.lf && k === 'photos' && !('photos' in s.lf)) return s.lf.mimg !== false || s.lf.img !== false; if (s.lf && k in s.lf) return !!s.lf[k]; const f = LOOK_F.find((x) => x[0] === k); return !!(f && f[3]) || lfHas(s, k); }
@@ -766,7 +766,7 @@ function pLooks(s) {
     const F = {
       model: () => field(T('Модель', 'Model'), inp(b + '.model', l.model, { r: true, ph: T('Имя модели', 'Model name') })),
       mua: () => field(T('Визажист', 'Make-up artist'), inp(b + '.mua', l.mua)),
-      photos: () => { const ph = lookPics(l); return '<div class="col" style="gap:6px"><span class="tiny muted">' + T('Фото: модель, образ, обувь, детали — сколько нужно. Первое — главное на листе.', 'Photos: model, look, details — as many as you need. The first is the main one.') + '</span><div class="grid3">' + ph.map((id, k) => '<div style="position:relative">' + imgTag(id, 'width:100%;aspect-ratio:3/4;object-fit:cover;border-radius:14px;display:block') + (k ? '<button class="chip sm" style="position:absolute;left:4px;bottom:4px;min-height:30px;padding:0 8px" data-a="lookPicFirst" data-s="' + s.id + '" data-x="' + l.id + '|' + id + '" aria-label="' + T('Сделать главным', 'Make main') + '">★</button>' : '<span class="tiny" style="position:absolute;left:6px;top:6px;background:rgba(255,255,255,.88);border-radius:8px;padding:1px 6px">' + T('главное', 'main') + '</span>') + '<button class="chip sm" style="position:absolute;right:4px;bottom:4px;min-height:30px;padding:0 8px" data-a="delLookPic" data-s="' + s.id + '" data-x="' + l.id + '|' + id + '" aria-label="' + T('Убрать', 'Remove') + '">×</button></div>').join('') + (ph.length < LOOK_MAX ? '<button class="btn soft" style="aspect-ratio:3/4;height:auto;border-radius:14px;flex-direction:column" data-a="pickLookImg" data-s="' + s.id + '" data-x="' + l.id + '|photos">+ ' + T('Фото', 'Photo') + '</button>' : '') + '</div></div>'; },
+      photos: () => { const ph = lookPics(l); return '<div class="col" style="gap:6px"><span class="tiny muted">' + T('Фото: модель, образ, обувь, детали — сколько нужно. Первое — главное на листе.', 'Photos: model, look, details — as many as you need. The first is the main one.') + '</span><div class="grid3">' + ph.map((id, k) => '<div style="position:relative">' + imgTag(id, 'width:100%;aspect-ratio:3/4;object-fit:cover;border-radius:14px;display:block') + (k ? '<button class="chip sm" style="position:absolute;left:4px;bottom:4px;min-height:30px;padding:0 8px" data-a="lookPicFirst" data-s="' + s.id + '" data-x="' + l.id + '|' + id + '" aria-label="' + T('Сделать главным', 'Make main') + '">★</button>' : '<span class="tiny" style="position:absolute;left:6px;top:6px;background:rgba(255,255,255,.88);border-radius:8px;padding:1px 6px">' + T('главное', 'main') + '</span>') + '<button class="chip sm" style="position:absolute;right:4px;bottom:4px;min-height:30px;padding:0 8px" data-a="delLookPic" data-s="' + s.id + '" data-x="' + l.id + '|' + id + '" aria-label="' + T('Убрать', 'Remove') + '">×</button><input class="inp" style="margin-top:4px;min-height:38px;padding:6px 10px;font-size:16px" data-b="' + esc(b + '.caps.' + id) + '" value="' + esc((l.caps || {})[id] || '') + '" placeholder="' + T('подпись', 'caption') + '" aria-label="' + T('Подпись к фото', 'Photo caption') + '"></div>').join('') + (ph.length < LOOK_MAX ? '<button class="btn soft" style="aspect-ratio:3/4;height:auto;border-radius:14px;flex-direction:column" data-a="pickLookImg" data-s="' + s.id + '" data-x="' + l.id + '|photos">+ ' + T('Фото', 'Photo') + '</button>' : '') + '</div></div>'; },
       params: () => field(T('Параметры модели', 'Model sizes'), inp(b + '.params', l.params, { ph: T('рост, размер, обувь', 'height, size, shoe') })),
       clothes: () => field(T('Одежда', 'Outfit'), inp(b + '.clothes', l.clothes)),
       shoes: () => field(T('Обувь', 'Shoes'), inp(b + '.shoes', l.shoes)),
@@ -1540,7 +1540,7 @@ function pMood(s) {
   const links = items.filter((x) => x.kind === 'link');
   let h = '<span class="small muted pad4">' + T('Референсы по съёмке: свет, позы, цвет, локация. Команде мудборд уходит одной картинкой А4 — её же можно распечатать.', 'References: light, poses, colour, location. The team gets it as one A4 image you can also print.') + '</span>';
   if (!items.length) h += '<div class="card dashed" style="align-items:center;text-align:center;padding:28px"><h3>' + T('Мудборд пустой', 'Moodboard is empty') + '</h3><span class="small muted">' + T('Для TFP хватит 5–6 картинок, для бренда — сколько нужно, чтобы все поняли одно и то же.', '5–6 images for TFP; for a brand, enough for everyone to see the same picture.') + '</span></div>';
-  if (pics.length) h += '<div class="grid2">' + pics.map((x) => '<button data-a="viewImg" data-s="' + s.id + '" data-x="' + x.id + '" style="padding:0;border:none;background:var(--line);border-radius:18px;overflow:hidden;aspect-ratio:3/4">' + imgTag(x.id, 'width:100%;height:100%;object-fit:cover;display:block') + '</button>').join('') + '</div>';
+  if (pics.length) h += '<div class="grid2">' + pics.map((x) => '<div class="col" style="gap:4px"><button data-a="viewImg" data-s="' + s.id + '" data-x="' + x.id + '" style="padding:0;border:none;background:var(--line);border-radius:18px;overflow:hidden;aspect-ratio:3/4">' + imgTag(x.id, 'width:100%;height:100%;object-fit:cover;display:block') + '</button><input class="inp" style="min-height:38px;padding:6px 10px;font-size:16px" data-b="shoot:' + s.id + '.mood:' + x.id + '.cap" value="' + esc(x.cap || '') + '" placeholder="' + T('подпись', 'caption') + '" aria-label="' + T('Подпись к фото', 'Photo caption') + '"></div>').join('') + '</div>';
   if (links.length) h += '<div class="card tight">' + links.map((x) => '<div class="li"><a class="grow" href="' + esc(/^https?:/i.test(x.url) ? x.url : 'https://' + x.url) + '" target="_blank" rel="noopener" style="word-break:break-all">' + esc(x.url) + '</a><button class="textbtn" data-a="delMood" data-s="' + s.id + '" data-x="' + x.id + '" aria-label="' + T('Удалить', 'Delete') + '">' + I.x.replace('<svg', '<svg width="16" height="16"') + '</button></div>').join('') + '</div>';
   h += '<div class="grid2"><button class="btn soft" data-a="pickMood" data-s="' + s.id + '">' + T('+ Фото', '+ Photos') + '</button><button class="btn soft" data-a="addMoodLink" data-s="' + s.id + '">' + T('+ Ссылка', '+ Link') + '</button></div>';
   h += '<div class="card">' + field(T('Описание мудборда', 'Moodboard description'), '<textarea class="inp" rows="3" data-b="shoot:' + s.id + '.moodText" placeholder="' + T('Идея, настроение, свет, цвета — попадёт на лист вместе с картинками', 'Idea, mood, light, colours — goes on the sheet with the images') + '">' + esc(s.moodText || '') + '</textarea>') + '</div>';
@@ -1569,6 +1569,7 @@ const A4 = { W: 1240, H: 1754, M: 70 };
 async function sheetFonts() { if (!document.fonts) return; await Promise.all(["600 40px 'Inter Tight'", "400 24px Inter", "600 24px Inter", "30px Neucha", "500 20px 'IBM Plex Mono'"].map((f) => document.fonts.load(f).catch(() => {}))); }
 async function loadImg(id) { if (!id) return null; const b = await mGet(id); if (!b) return null; return new Promise((r) => { const im = new Image(); im.onload = () => r(im); im.onerror = () => r(null); im.src = URL.createObjectURL(b); }); }
 function rrect(c, x, y, w, h, r) { c.beginPath(); c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r); c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath(); }
+function drawCap(c, text, x, y, w, h, r) { text = String(text || '').trim(); if (!text || w < 80) return; c.save(); if (r) { rrect(c, x, y, w, h, r); c.clip(); } c.font = "500 20px Inter, sans-serif"; const lines = wrapLines(c, text, w - 24, h > 400 ? 2 : 1); const bh = lines.length * 26 + 18; c.fillStyle = 'rgba(255,255,255,0.9)'; c.fillRect(x, y + h - bh, w, bh); c.fillStyle = '#1A1A22'; lines.forEach((ln, j) => c.fillText(ln, x + 12, y + h - bh + 30 + j * 26)); c.restore(); }
 function coverImg(c, im, x, y, w, h, r) { c.save(); rrect(c, x, y, w, h, r); c.clip(); c.fillStyle = '#EFEDEA'; c.fillRect(x, y, w, h); if (im) { const k = Math.max(w / im.width, h / im.height); const iw = im.width * k, ih = im.height * k; c.drawImage(im, x + (w - iw) / 2, y + (h - ih) / 2, iw, ih); } c.restore(); }
 function wrapLines(c, text, maxW, maxLines) { const words = String(text || '').split(/\s+/).filter(Boolean); const out = []; let line = ''; for (const w of words) { const t = line ? line + ' ' + w : w; if (c.measureText(t).width > maxW && line) { out.push(line); line = w; } else line = t; } if (line) out.push(line); if (out.length > maxLines) { const keep = out.slice(0, maxLines); let last = keep[maxLines - 1]; while (c.measureText(last + '…').width > maxW && last.length > 1) last = last.slice(0, -1); keep[maxLines - 1] = last + '…'; return keep; } return out; }
 function sheetHead(c, s, label, page, pages) {
@@ -1632,9 +1633,9 @@ async function drawLookCards(s) {
     c.font = "400 26px Inter, sans-serif"; c.fillStyle = mid; if (sub) wrapLines(c, sub, nmax, 2).forEach((ln, j) => c.fillText(ln, nx, M + 146 + j * 32));
     if (tm) { c.textAlign = 'right'; c.fillStyle = ink; c.font = "700 64px 'Inter Tight', Inter, sans-serif"; c.fillText(tm, W - M, M + 104); c.textAlign = 'left'; }
     // photos: only what exists
-    const ims = (await Promise.all((on('photos') ? lookPics(l) : []).map(loadImg))).filter(Boolean);
+    const phIds = on('photos') ? lookPics(l) : []; const loaded = await Promise.all(phIds.map(loadImg)); const caps = []; const ims = []; loaded.forEach((im, k) => { if (im) { ims.push(im); caps.push((l.caps || {})[phIds[k]] || ''); } });
     const top = M + 230, bottom = H - M - 70, gap = 16; let textX = M, textW = W - 2 * M, y = top + 20, afterY = top;
-    if (ims.length === 1) { const pw = 540, ph = 720; coverImg(c, ims[0], M, top, pw, ph, 10); textX = M + pw + 40; textW = W - M - textX; afterY = top + ph + 40; }
+    if (ims.length === 1) { const pw = 540, ph = 720; coverImg(c, ims[0], M, top, pw, ph, 10); drawCap(c, caps[0], M, top, pw, ph, 10); textX = M + pw + 40; textW = W - M - textX; afterY = top + ph + 40; }
     else if (ims.length >= 2) {
       const n = ims.length, AW = W - 2 * M, AH = n <= 2 ? 760 : n <= 4 ? 800 : 860; const R = [];
       const grid = (x0, y0, w, h, cols, rows, cnt) => { const cw = (w - gap * (cols - 1)) / cols, ch = (h - gap * (rows - 1)) / rows; for (let k = 0; k < cnt; k++) R.push([x0 + (k % cols) * (cw + gap), y0 + Math.floor(k / cols) * (ch + gap), cw, ch]); };
@@ -1642,7 +1643,7 @@ async function drawLookCards(s) {
       else if (n === 4) grid(M, top, AW, AH, 2, 2, 4);
       else if (n === 6) grid(M, top, AW, AH, 3, 2, 6);
       else { const bw = Math.round(AW * (n === 3 ? 0.6 : 0.46)); R.push([M, top, bw, AH]); const rest = n - 1; const cols = rest <= 2 ? 1 : 2; grid(M + bw + gap, top, AW - bw - gap, AH, cols, Math.ceil(rest / cols), rest); }
-      R.forEach((r, k) => coverImg(c, ims[k], r[0], r[1], r[2], r[3], 10));
+      R.forEach((r, k) => { coverImg(c, ims[k], r[0], r[1], r[2], r[3], 10); drawCap(c, caps[k], r[0], r[1], r[2], r[3], 10); });
       y = top + AH + 56; afterY = y;
     }
     // text blocks
@@ -1688,7 +1689,7 @@ async function drawMoodPages(s) {
     const gy = headH, gh = H - headH - linkH, ch = gh / rows;
     const ims = await Promise.all(chunk.map((x) => loadImg(x.id)));
     const perRow = []; let left = ims.length; for (let r = 0; r < rows; r++) { const k = Math.ceil(left / (rows - r)); perRow.push(k); left -= k; }
-    let idx = 0; perRow.forEach((k, r) => { const w = W / k; for (let j = 0; j < k; j++, idx++) { const im = ims[idx]; const x = j * w, y = gy + r * ch; c.save(); c.beginPath(); c.rect(Math.floor(x), Math.floor(y), Math.ceil(w) + 1, Math.ceil(ch) + 1); c.clip(); c.fillStyle = '#EFEDEA'; c.fillRect(x, y, w + 1, ch + 1); if (im) { const sc = Math.max(w / im.width, ch / im.height); c.drawImage(im, x + (w - im.width * sc) / 2, y + (ch - im.height * sc) / 2, im.width * sc, im.height * sc); } c.restore(); } });
+    let idx = 0; perRow.forEach((k, r) => { const w = W / k; for (let j = 0; j < k; j++, idx++) { const im = ims[idx]; const cap = chunk[idx] && chunk[idx].cap; const x = j * w, y = gy + r * ch; c.save(); c.beginPath(); c.rect(Math.floor(x), Math.floor(y), Math.ceil(w) + 1, Math.ceil(ch) + 1); c.clip(); c.fillStyle = '#EFEDEA'; c.fillRect(x, y, w + 1, ch + 1); if (im) { const sc = Math.max(w / im.width, ch / im.height); c.drawImage(im, x + (w - im.width * sc) / 2, y + (ch - im.height * sc) / 2, im.width * sc, im.height * sc); } c.restore(); drawCap(c, cap, x, y, w, ch); } });
     let ly = H - linkH + 30; if (p === pages - 1 && links.length) { c.font = "400 18px Inter, sans-serif"; c.fillStyle = '#3B4FB0'; links.slice(0, 3).forEach((u) => { wrapLines(c, u, W - 2 * M, 1).forEach((ln) => c.fillText(ln, M, ly)); ly += 26; }); }
     c.font = "400 18px Inter, sans-serif"; c.fillStyle = '#6E6B75'; c.fillText(T('SET — приложение для съёмок', 'SET — the app for shoots'), M, H - 16);
     const blob = await new Promise((r) => cv.toBlob(r, 'image/png'));
