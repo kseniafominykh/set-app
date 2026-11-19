@@ -1,6 +1,6 @@
 'use strict';
 /* SET — beta. All data lives on this device (localStorage). */
-const VERSION = '0.13.1 beta';
+const VERSION = '0.14.0 beta';
 const APP_URL = (location.host + location.pathname).replace(/index\.html$/, '').replace(/\/$/, '');
 const KEY = 'set.v1';
 
@@ -603,6 +603,7 @@ function vToday() {
   if (up.length > 1) {
     h += '<h3 class="pad4">' + T('Дальше', 'Coming up') + '</h3><div class="card tight">' + up.slice(nextS && nextS.date !== t ? 1 : 0).filter((s) => s.date !== t).slice(0, 5).map((s) => '<a class="li" href="' + (s.src === 'own' ? '#/own/' : '#/p/') + s.id + '"><span class="mono small" style="min-width:58px">' + esc(fmtDate(s.date).replace(/ \d{4}$/, '')) + '</span><span class="grow"><b style="font-weight:600">' + esc(titleOf(s)) + '</b><br><span class="tiny muted">' + T('сбор', 'call') + ' ' + esc(s.call) + '</span></span>' + I.next.replace('<svg', '<svg width="18" height="18"') + '</a>').join('') + '</div>';
   }
+  h += '<a class="tiny muted pad4" href="#/help" style="align-self:center;text-decoration:underline;margin-top:4px">' + T('Нужна помощь? Напиши нам', 'Need help? Write to us') + '</a>';
   h += '</div>' + nav('today');
   return h;
 }
@@ -1075,6 +1076,7 @@ function vMe() {
 function vSettings() {
   let h = '<div class="screen"><div class="top">' + backBtn('#/me') + '<span class="kicker">' + T('Настройки', 'Settings') + '</span><span style="width:44px"></span></div><h1 class="pad4">' + T('Настройки', 'Settings') + '</h1>';
   h += '<div class="card"><h3>' + T('Язык', 'Language') + '</h3><div class="chips">' + chip('Русский', S.lang === 'ru', 'lang', 'ru') + chip('English', S.lang === 'en', 'lang', 'en') + '</div></div>';
+  h += '<a class="card glow-lemon" href="#/help" style="text-decoration:none;color:inherit"><h3>' + T('Поддержка и вопросы', 'Support & FAQ') + '</h3><span class="small">' + T('Ошибка, идея или непонятно — напиши, ответит живой человек', 'Bug, idea or question — a real person answers') + '</span></a>';
   h += notifCard(false);
   h += '<div class="card tight">' + sw(T('Подсказки-обучалки', 'Coaching tips'), T('короткие подсказки на каждом экране', 'short tips on each screen'), !S.tipsOff, 'toggleTips', '') + '</div>' + (S.seenTips && Object.keys(S.seenTips).length && !S.tipsOff ? '<button class="textbtn" style="align-self:flex-start" data-a="resetTips">' + T('Показать подсказки заново', 'Show tips again') + '</button>' : '');
   h += '<div class="card glow-teal"><h3>' + T('Как поставить на телефон', 'Install on your phone') + '</h3><span class="small">' + T('iPhone: в Safari нажми «Поделиться» → «На экран Домой». Android: в Chrome меню ⋮ → «Добавить на главный экран». SET откроется как приложение и будет работать без интернета.', 'iPhone: in Safari tap Share → Add to Home Screen. Android: Chrome menu ⋮ → Add to Home screen.') + '</span></div>';
@@ -1118,7 +1120,7 @@ function vSheet() {
     const p = sh.data;
     h += '<div class="row between"><h2>' + (sh.isNew ? T('Новый человек', 'New person') : esc(p.name)) + '</h2><button class="iconbtn" data-a="closeSheet" aria-label="' + T('Закрыть', 'Close') + '">' + I.x + '</button></div>' +
       field(T('Имя', 'Name'), '<input class="inp" id="pName" value="' + esc(p.name) + '">') + field(T('Роль', 'Role'), roleSelect('', p.role).replace('data-b=""', 'id="pRole"')) +
-      field(T('Телефон', 'Phone'), '<input class="inp" type="tel" inputmode="tel" id="pPhone" value="' + esc(p.phone || '') + '" placeholder="+7 900 000-00-00">') +
+      field(T('Телефон', 'Phone'), '<input class="inp" type="tel" inputmode="tel" id="pPhone" value="' + esc(p.phone || '') + '" placeholder="+7 900 000-00-00">') + '<span class="tiny muted" style="margin-top:-8px">' + T('Добавляй контакты с согласия человека. Они хранятся только у тебя.', 'Add contacts with the person’s consent. They stay with you.') + '</span>' +
       '<div class="grid2">' + field('Telegram', '<input class="inp" id="pTg" data-tg="1" autocapitalize="off" value="' + esc(p.tg || '') + '" placeholder="@nick">') + field('Instagram', '<input class="inp" id="pInsta" value="' + esc(p.insta || '') + '" placeholder="@">') + '</div>' +
       '<div class="col"><span class="tiny muted">' + T('Не ест', 'Food') + '</span><div class="chips">' + FOOD.slice(1).map((f) => '<button class="chip sm" data-a="togglePFood" data-x="' + f[0] + '" aria-pressed="' + (p.food || []).includes(f[0]) + '">' + esc(L() === 'en' ? f[2] : f[1]) + '</button>').join('') + '</div></div>' +
       field(T('Заметка', 'Note'), '<textarea class="inp" id="pNote" placeholder="' + T('Размеры, рост, что важно знать', 'Sizes, notes') + '">' + esc(p.note || '') + '</textarea>') +
@@ -1153,6 +1155,11 @@ function vSheet() {
       (showB ? field(T('Бартер / сертификат, ₽ — сколько стоит', 'Barter / voucher value'), '<input class="inp mono" inputmode="numeric" id="lBarter" value="' + esc(x.barter) + '">') : '') +
       sw(T('Под вопросом', 'Open question'), T('ещё не согласовано или ждём сумму', 'not agreed yet or waiting for a number'), x.q, 'lineQ', '') +
       '<button class="btn big" data-a="saveLine">' + T('Сохранить', 'Save') + '</button>' + (!sh.isNew ? '<button class="btn danger" data-a="deleteLine">' + T('Удалить строку', 'Delete line') + '</button>' : '');
+  }
+  if (sh.type === 'support') {
+    h += '<div class="row between"><h2>' + T('Сообщение в поддержку', 'Message to support') + '</h2><button class="iconbtn" data-a="closeSheet" aria-label="' + T('Закрыть', 'Close') + '">' + I.x + '</button></div><textarea class="inp" id="supText" style="min-height:220px;font-size:16px">' + esc(sh.text) + '</textarea>' +
+      (SUB.tg || SUB.wa ? '<div class="grid2">' + (SUB.tg ? '<button class="btn" data-a="supportSend" data-x="tg">Telegram</button>' : '') + (SUB.wa ? '<button class="btn" data-a="supportSend" data-x="wa">WhatsApp</button>' : '') + '</div>' : '<span class="small muted">' + T('Контакт поддержки скоро появится. Пока скопируй текст и отправь тому, кто дал тебе ссылку на SET.', 'Support contact coming soon. Copy the text for now.') + '</span>') +
+      '<button class="btn soft" data-a="supportSend" data-x="copy">' + T('Скопировать текст', 'Copy text') + '</button>' + (SUB.tg ? '<span class="tiny muted">' + T('В Telegram текст скопируется — вставь его в чат.', 'In Telegram, paste the copied text.') + '</span>' : '');
   }
   if (sh.type === 'out') {
     h += '<div class="row between"><h2>' + esc(sh.title) + '</h2><button class="iconbtn" data-a="closeSheet" aria-label="' + T('Закрыть', 'Close') + '">' + I.x + '</button></div>';
@@ -1365,6 +1372,11 @@ const A = {
     if (navigator.canShare && navigator.canShare({ files: [rcFile] })) { try { await navigator.share({ files: [rcFile] }); } catch (e) { /* cancelled */ } return; }
     rcDownload(); toast(T('Картинка сохранена — выложи её в сторис', 'Saved — post it to your story'));
   },
+  supportMsg: (el) => { ui.sheet = { type: 'support', text: supportText(el.dataset.x) }; render(); setTimeout(() => { const t = $('#supText'); if (t) { t.focus(); } }, 60); },
+  supportSend: async (el) => { const t = ($('#supText')?.value || '').trim(); const k = el.dataset.x; let copied = false; try { await navigator.clipboard.writeText(t); copied = true; } catch (e) { /* no clipboard */ }
+    if (k === 'tg' && SUB.tg) { window.open('https://t.me/' + SUB.tg, '_blank'); toast(copied ? T('Текст скопирован — вставь его в чат', 'Copied — paste it in the chat') : T('Скопируй текст вручную', 'Copy the text manually')); return; }
+    if (k === 'wa' && SUB.wa) { window.open('https://wa.me/' + SUB.wa + '?text=' + encodeURIComponent(t), '_blank'); return; }
+    toast(copied ? T('Скопировано', 'Copied') : T('Не получилось скопировать', 'Could not copy')); },
   lookSheet: (el) => makeOut(el.dataset.s, 'looks'),
   moodSheet: (el) => makeOut(el.dataset.s, 'mood'),
   outShare: async () => { const f = ui.sheet?.files; if (!f) return; if (navigator.canShare && navigator.canShare({ files: f })) { try { await navigator.share({ files: f }); } catch (e) { /* cancelled */ } return; } A.outSave(); },
@@ -1706,6 +1718,32 @@ async function makeOut(sid, kind) {
   catch (e) { toast(T('Не получилось собрать лист', 'Could not build the sheet')); }
 }
 
+
+/* --- support --- */
+const FAQ = [
+  ['Где хранятся мои данные?', 'Сейчас — только в этом телефоне. Сохраняй резервную копию в настройках раз в неделю и перед сменой телефона. Облако со входом по номеру — следующий большой шаг.'],
+  ['Как поставить SET как приложение?', 'iPhone: открой в Safari, нажми «Поделиться» → «На экран Домой». Android: в Chrome меню ⋮ → «Добавить на главный экран». Заходи потом с иконки — так данные хранятся надёжнее.'],
+  ['Как позвать команду?', 'В проекте вкладка «Команда» → «Написать» у человека. Он получит условия и ссылку на проект. Команде ничего платить не нужно.'],
+  ['Тайминг поменялся — команда увидит?', 'Нажми «Отправить команде» ещё раз: по новой ссылке проект у всех обновится. Пока ссылка — это снимок на момент отправки.'],
+  ['Как распечатать карточки образов?', 'Вкладка «Образы» → «Карточки образов для печати» → «Отправить или распечатать» → «Напечатать».'],
+  ['Как убрать лишние поля?', 'Во вкладке «Образы» нажми «Настроить» и выключи то, что не нужно этой съёмке. Разделы проекта выключаются при создании съёмки.'],
+  ['Как оплатить подписку?', 'В настройках → «Подписка». Если что-то не получилось — напиши в поддержку, разберёмся.']];
+const deviceInfo = () => { const u = navigator.userAgent; const os = /iPhone|iPad/.test(u) ? 'iOS' : /Android/.test(u) ? 'Android' : /Mac/.test(u) ? 'Mac' : /Windows/.test(u) ? 'Windows' : 'другое'; const app = window.matchMedia && window.matchMedia('(display-mode: standalone)').matches ? 'с экрана «Домой»' : 'в браузере'; return 'SET ' + VERSION + ' · ' + os + ' · ' + app; };
+function vHelp() {
+  let h = '<div class="screen"><div class="top">' + backBtn('#/settings') + '<span class="kicker">' + T('Поддержка', 'Support') + '</span><span style="width:44px"></span></div><h1 class="pad4">' + T('Чем<br>помочь?', 'How can<br>we help?') + '</h1>';
+  h += '<span class="small muted pad4">' + T('Отвечает живой человек — продюсер, который сам снимает. Пиши как удобно: про ошибку, идею или если просто непонятно.', 'A real person answers — a producer who shoots too.') + '</span>';
+  h += '<div class="grid2"><button class="btn big" data-a="supportMsg" data-x="bug">' + T('Что-то сломалось', 'Something broke') + '</button><button class="btn soft big" data-a="supportMsg" data-x="idea">' + T('Есть идея', 'I have an idea') + '</button></div>';
+  h += '<button class="btn ghost" data-a="supportMsg" data-x="ask">' + T('Просто вопрос', 'Just a question') + '</button>';
+  h += '<h3 class="pad4" style="margin-top:8px">' + T('Частые вопросы', 'FAQ') + '</h3><div class="card tight">' + FAQ.map((q) => '<details class="li" style="display:block"><summary style="cursor:pointer;font-weight:600;padding:4px 0">' + esc(q[0]) + '</summary><p class="small muted" style="margin:6px 0 4px">' + esc(q[1]) + '</p></details>').join('') + '</div>';
+  h += '<span class="tiny muted pad4">' + esc(deviceInfo()) + '</span>';
+  return h + '</div>' + nav('');
+}
+function supportText(kind) {
+  const head = { bug: T('Что-то сломалось в SET', 'Something broke in SET'), idea: T('Идея для SET', 'Idea for SET'), ask: T('Вопрос про SET', 'Question about SET') }[kind] || 'SET';
+  const body = { bug: T('Что делала:\n\nЧто случилось:\n\nЧто ожидала:\n', 'What I did:\n\nWhat happened:\n\nWhat I expected:\n'), idea: T('Чего не хватает:\n\nКак это помогло бы на съёмке:\n', 'What is missing:\n\nHow it would help:\n'), ask: '' }[kind] || '';
+  return head + '\n\n' + body + '\n— ' + deviceInfo() + (S.profile.name ? ' · ' + S.profile.name : '');
+}
+
 /* ---------- demo ---------- */
 function loadDemo() {
   const t = new Date();
@@ -1763,6 +1801,7 @@ function render() {
   else if (a === 'people') html = vPeople();
   else if (a === 'me') html = vMe();
   else if (a === 'settings') html = vSettings();
+  else if (a === 'help') html = vHelp();
   else if (a === 'pro') html = vPro();
   else if (a === 'join') { joinFrom(parts.slice(1).join('/')); return; }
   else if (a === 'activate') { const code = decodeURIComponent(parts.slice(1).join('/')); location.replace('#/pro'); doActivate(code); return; }
