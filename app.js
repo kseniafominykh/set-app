@@ -1,6 +1,6 @@
 'use strict';
 /* SET — beta. All data lives on this device (localStorage). */
-const VERSION = '0.12.0 beta';
+const VERSION = '0.13.0 beta';
 const APP_URL = (location.host + location.pathname).replace(/index\.html$/, '').replace(/\/$/, '');
 const KEY = 'set.v1';
 
@@ -744,13 +744,15 @@ function lookSlot(s, l, key, label) {
   return '<button class="btn soft" style="min-height:96px;height:auto;flex-direction:column;border-radius:18px;white-space:normal" data-a="pickLookImg" data-s="' + s.id + '" data-x="' + l.id + '|' + key + '">+ ' + esc(label) + '</button>';
 }
 const LOOK_F = [
-  ['mimg', 'Фото модели', 'Model photo', 1], ['img', 'Фото образа', 'Look photo', 1], ['pics', 'Фото деталей', 'Detail photos', 0],
+  ['photos', 'Фото', 'Photos', 1],
   ['params', 'Параметры модели', 'Model sizes', 0], ['clothes', 'Одежда', 'Outfit', 1], ['shoes', 'Обувь', 'Shoes', 0], ['acc', 'Аксессуары', 'Accessories', 0],
   ['makeup', 'Мейк', 'Make-up', 1], ['mua', 'Визажист', 'Make-up artist', 1], ['hair', 'Волосы', 'Hair', 1], ['hairby', 'Кто делает волосы', 'Hair by', 0],
   ['shots', 'Шот-лист', 'Shot list', 0], ['comment', 'Комментарий', 'Comment', 1], ['note', 'Важно (красным)', 'Important (in red)', 0],
   ['time', 'Время', 'Time', 0], ['name', 'Название образа', 'Look name', 0], ['ref', 'Ссылка на референс', 'Reference link', 0]];
-const lfHas = (s, k) => (s.looks || []).some((l) => k === 'pics' ? (l.pics || []).length : String(l[k] || '').trim());
-function lfOn(s, k) { if (s.lf && k in s.lf) return !!s.lf[k]; const f = LOOK_F.find((x) => x[0] === k); return !!(f && f[3]) || lfHas(s, k); }
+function lookPics(l) { if (!Array.isArray(l.photos)) { l.photos = [l.mimg, l.img, ...(l.pics || [])].filter(Boolean); delete l.mimg; delete l.img; delete l.pics; } return l.photos; }
+const LOOK_MAX = 8;
+const lfHas = (s, k) => (s.looks || []).some((l) => k === 'photos' ? lookPics(l).length : String(l[k] || '').trim());
+function lfOn(s, k) { if (s.lf && k === 'photos' && !('photos' in s.lf)) return s.lf.mimg !== false || s.lf.img !== false; if (s.lf && k in s.lf) return !!s.lf[k]; const f = LOOK_F.find((x) => x[0] === k); return !!(f && f[3]) || lfHas(s, k); }
 function pLooks(s) {
   let h = '';
   const on = (k) => lfOn(s, k);
@@ -764,9 +766,7 @@ function pLooks(s) {
     const F = {
       model: () => field(T('Модель', 'Model'), inp(b + '.model', l.model, { r: true, ph: T('Имя модели', 'Model name') })),
       mua: () => field(T('Визажист', 'Make-up artist'), inp(b + '.mua', l.mua)),
-      mimg: () => lookSlot(s, l, 'mimg', T('Фото модели', 'Model photo')),
-      img: () => lookSlot(s, l, 'img', T('Фото образа', 'Look photo')),
-      pics: () => '<div class="col" style="gap:6px"><span class="tiny muted">' + T('Фото деталей: обувь, аксессуары', 'Detail photos: shoes, accessories') + '</span><div class="grid3">' + (l.pics || []).map((id) => '<div style="position:relative">' + imgTag(id, 'width:100%;aspect-ratio:1;object-fit:cover;border-radius:14px;display:block') + '<button class="chip sm" style="position:absolute;right:4px;bottom:4px;min-height:30px;padding:0 8px" data-a="delLookPic" data-s="' + s.id + '" data-x="' + l.id + '|' + id + '" aria-label="' + T('Убрать', 'Remove') + '">×</button></div>').join('') + ((l.pics || []).length < 3 ? '<button class="btn soft" style="aspect-ratio:1;height:auto;border-radius:14px" data-a="pickLookImg" data-s="' + s.id + '" data-x="' + l.id + '|pics" aria-label="' + T('Добавить фото', 'Add photo') + '">+</button>' : '') + '</div></div>',
+      photos: () => { const ph = lookPics(l); return '<div class="col" style="gap:6px"><span class="tiny muted">' + T('Фото: модель, образ, обувь, детали — сколько нужно. Первое — главное на листе.', 'Photos: model, look, details — as many as you need. The first is the main one.') + '</span><div class="grid3">' + ph.map((id, k) => '<div style="position:relative">' + imgTag(id, 'width:100%;aspect-ratio:3/4;object-fit:cover;border-radius:14px;display:block') + (k ? '<button class="chip sm" style="position:absolute;left:4px;bottom:4px;min-height:30px;padding:0 8px" data-a="lookPicFirst" data-s="' + s.id + '" data-x="' + l.id + '|' + id + '" aria-label="' + T('Сделать главным', 'Make main') + '">★</button>' : '<span class="tiny" style="position:absolute;left:6px;top:6px;background:rgba(255,255,255,.88);border-radius:8px;padding:1px 6px">' + T('главное', 'main') + '</span>') + '<button class="chip sm" style="position:absolute;right:4px;bottom:4px;min-height:30px;padding:0 8px" data-a="delLookPic" data-s="' + s.id + '" data-x="' + l.id + '|' + id + '" aria-label="' + T('Убрать', 'Remove') + '">×</button></div>').join('') + (ph.length < LOOK_MAX ? '<button class="btn soft" style="aspect-ratio:3/4;height:auto;border-radius:14px;flex-direction:column" data-a="pickLookImg" data-s="' + s.id + '" data-x="' + l.id + '|photos">+ ' + T('Фото', 'Photo') + '</button>' : '') + '</div></div>'; },
       params: () => field(T('Параметры модели', 'Model sizes'), inp(b + '.params', l.params, { ph: T('рост, размер, обувь', 'height, size, shoe') })),
       clothes: () => field(T('Одежда', 'Outfit'), inp(b + '.clothes', l.clothes)),
       shoes: () => field(T('Обувь', 'Shoes'), inp(b + '.shoes', l.shoes)),
@@ -780,7 +780,7 @@ function pLooks(s) {
       time: () => field(T('Время', 'Time'), inp(b + '.time', l.time, { ph: '12:30' })),
       name: () => field(T('Название образа', 'Look name'), inp(b + '.name', l.name, { aria: T('Название образа', 'Look name') })),
       ref: () => field(T('Референс (ссылка)', 'Reference (link)'), inp(b + '.ref', l.ref, { ph: 'pinterest.com/…' })) };
-    const rows = [['model', 'mua'], ['mimg', 'img'], ['pics'], ['params'], ['clothes'], ['shoes', 'acc'], ['makeup'], ['hair', 'hairby'], ['shots'], ['comment'], ['note'], ['time', 'name'], ['ref']];
+    const rows = [['model', 'mua'], ['photos'], ['params'], ['clothes'], ['shoes', 'acc'], ['makeup'], ['hair', 'hairby'], ['shots'], ['comment'], ['note'], ['time', 'name'], ['ref']];
     h += '<div class="card ' + (i % 2 ? 'glow-sky' : 'glow-pink') + '"><div class="row between"><span class="look-num">' + T('Образ', 'Look') + ' ' + pad(i + 1) + '</span><div class="row"><button class="chip sm" aria-pressed="' + !!l.done + '" data-a="toggleLook" data-s="' + s.id + '" data-x="' + l.id + '">' + (l.done ? T('✓ снят', '✓ shot') : T('не снят', 'to shoot')) + '</button><button class="textbtn" data-a="delRow" data-s="' + s.id + '" data-x="looks|' + l.id + '" aria-label="' + T('Удалить образ', 'Delete look') + '">' + I.trash.replace('<svg', '<svg width="18" height="18"') + '</button></div></div>' +
       rows.map((r) => r.filter((k) => k === 'model' || on(k))).filter((r) => r.length).map((r) => r.length === 2 ? '<div class="grid2">' + F[r[0]]() + F[r[1]]() + '</div>' : F[r[0]]()).join('') + '</div>';
   });
@@ -816,7 +816,7 @@ function printHtml(s) {
   if (s.timing.length) h += '<h3 style="margin-top:16px">' + T('Тайминг', 'Schedule') + '</h3><table><tbody>' + sortedTiming(s).map((x) => '<tr><td style="width:92px;font-family:var(--mono)">' + esc(x.t) + (x.t2 ? '–' + esc(x.t2) : '') + '</td><td><b>' + esc(x.w) + '</b>' + (x.det ? '<br><span style="color:#555">' + esc(x.det) + '</span>' : '') + '</td><td>' + esc(x.who || '') + '</td></tr>').join('') + '</tbody></table>';
   if (s.team.length) h += '<h3 style="margin-top:16px">' + T('Команда', 'Team') + '</h3><table><thead><tr><th>' + T('Имя', 'Name') + '</th><th>' + T('Роль', 'Role') + '</th><th>' + T('Сбор', 'Call') + '</th><th>' + T('Связь', 'Contact') + '</th></tr></thead><tbody>' + s.team.map((m) => '<tr><td>' + esc(m.name) + '</td><td>' + esc(roleName(m.role)) + '</td><td style="font-family:var(--mono)">' + esc(m.call || s.call) + '</td><td>' + esc((() => { const p = S.people.find((x) => x.id === m.pid); return [tgNick(p?.tg), p?.phone].filter(Boolean).join(' · '); })()) + '</td></tr>').join('') + '</tbody></table>';
   const food = teamFood(s); if (food) h += '<p style="margin-top:10px"><b>' + T('Еда', 'Food') + ':</b> ' + esc(food) + '</p>';
-  if (s.modules.looks && s.looks.length) h += '<h3 class="pb" style="margin-top:16px">' + T('Образы', 'Looks') + '</h3><div class="looks">' + s.looks.map((l, i) => '<div class="look">' + ((l.mimg || l.img) ? '<div style="display:flex;gap:6px;margin-bottom:6px">' + [l.mimg, l.img].filter(Boolean).map((x) => imgTag(x, 'flex:1;min-width:0;height:150px;object-fit:cover;border-radius:6px')).join('') + '</div>' : '') + '<div style="font-family:var(--mono);font-size:11px">' + T('ОБРАЗ', 'LOOK') + ' ' + pad(i + 1) + '</div><b style="font-size:15px">' + esc(l.name || '—') + '</b><br>' + T('Модель', 'Model') + ': ' + esc(l.model || '—') + '<br>' + T('Одежда', 'Clothes') + ': ' + esc(l.clothes || '—') + '<br>' + T('Мейк', 'Make-up') + ': ' + esc(l.makeup || '—') + (l.mua ? ' · ' + T('визажист', 'MUA') + ' ' + esc(l.mua) : '') + '<br>' + T('Волосы', 'Hair') + ': ' + esc(l.hair || '—') + (l.shoes ? '<br>' + T('Обувь', 'Shoes') + ': ' + esc(l.shoes) : '') + (l.acc ? '<br>' + T('Аксессуары', 'Accessories') + ': ' + esc(l.acc) : '') + (l.comment ? '<br>' + esc(l.comment) : '') + (l.note ? '<br><b style="color:#B4271B">! ' + esc(l.note) + '</b>' : '') + '<div style="margin-top:6px">☐ ' + T('снят', 'shot') + '</div></div>').join('') + '</div>';
+  if (s.modules.looks && s.looks.length) h += '<h3 class="pb" style="margin-top:16px">' + T('Образы', 'Looks') + '</h3><div class="looks">' + s.looks.map((l, i) => '<div class="look">' + (lookPics(l).length ? '<div style="display:flex;gap:6px;margin-bottom:6px">' + lookPics(l).slice(0, 3).map((x) => imgTag(x, 'flex:1;min-width:0;height:150px;object-fit:cover;border-radius:6px')).join('') + '</div>' : '') + '<div style="font-family:var(--mono);font-size:11px">' + T('ОБРАЗ', 'LOOK') + ' ' + pad(i + 1) + '</div><b style="font-size:15px">' + esc(l.name || '—') + '</b><br>' + T('Модель', 'Model') + ': ' + esc(l.model || '—') + '<br>' + T('Одежда', 'Clothes') + ': ' + esc(l.clothes || '—') + '<br>' + T('Мейк', 'Make-up') + ': ' + esc(l.makeup || '—') + (l.mua ? ' · ' + T('визажист', 'MUA') + ' ' + esc(l.mua) : '') + '<br>' + T('Волосы', 'Hair') + ': ' + esc(l.hair || '—') + (l.shoes ? '<br>' + T('Обувь', 'Shoes') + ': ' + esc(l.shoes) : '') + (l.acc ? '<br>' + T('Аксессуары', 'Accessories') + ': ' + esc(l.acc) : '') + (l.comment ? '<br>' + esc(l.comment) : '') + (l.note ? '<br><b style="color:#B4271B">! ' + esc(l.note) + '</b>' : '') + '<div style="margin-top:6px">☐ ' + T('снят', 'shot') + '</div></div>').join('') + '</div>';
   const mp = (s.mood || []).filter((x) => x.kind === 'img'); const ml = (s.mood || []).filter((x) => x.kind === 'link');
   if (mp.length || ml.length) h += '<h3 class="pb" style="margin-top:16px">' + T('Мудборд', 'Moodboard') + '</h3><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px">' + mp.map((x) => imgTag(x.id, 'width:100%;aspect-ratio:3/4;object-fit:cover;border-radius:8px')).join('') + '</div>' + (ml.length ? '<p style="font-size:11px;word-break:break-all">' + ml.map((x) => esc(x.url)).join('<br>') + '</p>' : '');
   if (s.notes) h += '<p style="margin-top:14px;white-space:pre-line"><b>' + T('Заметки', 'Notes') + ':</b> ' + esc(s.notes) + '</p>';
@@ -858,7 +858,7 @@ function vOnSet(id) {
   if (!looks.length) h += '<div class="hint"><span class="dot"></span><span>' + T('Добавь образы в проекте — здесь они пойдут по очереди.', 'Add looks in the project — they’ll queue here.') + '</span></div>';
   if (cur) {
     const i = looks.indexOf(cur);
-    h += '<div style="background:radial-gradient(circle at 88% 8%, rgba(244,161,195,0.5), rgba(244,161,195,0.12) 45%, transparent 70%), #232328;border-radius:28px;padding:24px;display:flex;flex-direction:column;gap:8px"><span class="mono small" style="color:#C9C5BB">' + T('СЕЙЧАС · ОБРАЗ ', 'NOW · LOOK ') + pad(i + 1) + '</span>' + (cur.img ? imgTag(cur.img, 'width:100%;max-height:300px;object-fit:cover;border-radius:18px;display:block;margin:4px 0') : '') + '<span class="h1" style="font-size:44px">' + esc(cur.name || T('Образ ', 'Look ') + pad(i + 1)) + '</span><span>' + esc([cur.model, cur.clothes].filter(Boolean).join(' · ')) + '</span><span class="small" style="color:#C9C5BB">' + esc([cur.makeup && T('мейк: ', 'make-up: ') + cur.makeup, cur.hair && T('волосы: ', 'hair: ') + cur.hair].filter(Boolean).join(' · ')) + '</span>' + (cur.comment ? '<span class="small">' + esc(cur.comment) + '</span>' : '') + (cur.note ? '<b class="small" style="color:#F4A1C3">! ' + esc(cur.note) + '</b>' : '') + (String(cur.shots || '').trim() ? '<div class="col" style="gap:4px;margin-top:6px"><span class="mono tiny" style="color:#C9C5BB">' + T('КАДРЫ', 'SHOTS') + '</span>' + String(cur.shots).split('\n').map((x) => x.trim()).filter(Boolean).map((x) => '<span class="small">☐ ' + esc(x) + '</span>').join('') + '</div>' : '') + '</div>';
+    h += '<div style="background:radial-gradient(circle at 88% 8%, rgba(244,161,195,0.5), rgba(244,161,195,0.12) 45%, transparent 70%), #232328;border-radius:28px;padding:24px;display:flex;flex-direction:column;gap:8px"><span class="mono small" style="color:#C9C5BB">' + T('СЕЙЧАС · ОБРАЗ ', 'NOW · LOOK ') + pad(i + 1) + '</span>' + (lookPics(cur)[0] ? imgTag(lookPics(cur)[0], 'width:100%;max-height:300px;object-fit:cover;border-radius:18px;display:block;margin:4px 0') : '') + '<span class="h1" style="font-size:44px">' + esc(cur.name || T('Образ ', 'Look ') + pad(i + 1)) + '</span><span>' + esc([cur.model, cur.clothes].filter(Boolean).join(' · ')) + '</span><span class="small" style="color:#C9C5BB">' + esc([cur.makeup && T('мейк: ', 'make-up: ') + cur.makeup, cur.hair && T('волосы: ', 'hair: ') + cur.hair].filter(Boolean).join(' · ')) + '</span>' + (cur.comment ? '<span class="small">' + esc(cur.comment) + '</span>' : '') + (cur.note ? '<b class="small" style="color:#F4A1C3">! ' + esc(cur.note) + '</b>' : '') + (String(cur.shots || '').trim() ? '<div class="col" style="gap:4px;margin-top:6px"><span class="mono tiny" style="color:#C9C5BB">' + T('КАДРЫ', 'SHOTS') + '</span>' + String(cur.shots).split('\n').map((x) => x.trim()).filter(Boolean).map((x) => '<span class="small">☐ ' + esc(x) + '</span>').join('') + '</div>' : '') + '</div>';
     const nx = left[1];
     if (nx) h += '<span class="small pad4" style="color:#9A968C">' + T('Следом: ', 'Then: ') + esc(nx.name || T('образ ', 'look ') + pad(looks.indexOf(nx) + 1)) + (nx.model ? ' · ' + esc(nx.model) + T(' — пора на грим', ' — to make-up') : '') + '</span>';
   } else if (looks.length) {
@@ -1336,7 +1336,7 @@ const A = {
   toggleNewMod: (el) => { ui.newMods[el.dataset.x] = !ui.newMods[el.dataset.x]; render(); },
   toggleCheck: (el) => { const s = getShoot(el.dataset.s); const c = s.checklist.find((x) => x.id === el.dataset.x); c.done = !c.done; save(); render(); },
   addCheck: (el) => { const s = getShoot(el.dataset.s); const v = $('#newCheck').value.trim(); if (!v) return; s.checklist.push({ id: uid(), text: v, done: false }); save(); render(); $('#newCheck')?.focus(); },
-  delRow: (el) => { const s = getShoot(el.dataset.s); const [arr, id] = el.dataset.x.split('|'); if (arr === 'looks' && !confirm(T('Удалить образ?', 'Delete this look?'))) return; if (arr === 'looks') { const l = s.looks.find((x) => x.id === id); if (l) { if (l.img) mDel(l.img); if (l.mimg) mDel(l.mimg); (l.pics || []).forEach(mDel); } } s[arr] = s[arr].filter((x) => x.id !== id); save(); render(); },
+  delRow: (el) => { const s = getShoot(el.dataset.s); const [arr, id] = el.dataset.x.split('|'); if (arr === 'looks' && !confirm(T('Удалить образ?', 'Delete this look?'))) return; if (arr === 'looks') { const l = s.looks.find((x) => x.id === id); if (l) lookPics(l).forEach(mDel); } s[arr] = s[arr].filter((x) => x.id !== id); save(); render(); },
   useTemplate: (el) => { const s = getShoot(el.dataset.s); s.timing = genTiming(s); save(); render(); },
   tlToggle: (el) => { ui.tlOpen = ui.tlOpen === el.dataset.x ? null : el.dataset.x; render(); },
   clearTiming: (el) => { if (!confirm(T('Удалить все строки тайминга?', 'Clear the whole schedule?'))) return; const s = getShoot(el.dataset.s); s.timing = []; save(); render(); },
@@ -1401,8 +1401,9 @@ const A = {
   activateManual: () => { const v = ($('#actCode')?.value || '').trim(); const m = v.match(/activate\/(.+)$/); doActivate(m ? decodeURIComponent(m[1]) : v); },
 
   pickMood: (el) => { mediaTarget = { s: el.dataset.s, kind: 'mood' }; pickFiles(true); },
-  pickLookImg: (el) => { const [look, key] = el.dataset.x.split('|'); mediaTarget = { s: el.dataset.s, kind: 'look', look, key: key || 'img' }; pickFiles(key === 'pics'); },
-  delLookPic: (el) => { const s = getShoot(el.dataset.s); const [lid, id] = el.dataset.x.split('|'); const l = s.looks.find((x) => x.id === lid); if (!l) return; mDel(id); l.pics = (l.pics || []).filter((x) => x !== id); save(); render(); },
+  pickLookImg: (el) => { const [look] = el.dataset.x.split('|'); mediaTarget = { s: el.dataset.s, kind: 'look', look }; pickFiles(true); },
+  lookPicFirst: (el) => { const s = getShoot(el.dataset.s); const [lid, id] = el.dataset.x.split('|'); const l = s.looks.find((x) => x.id === lid); if (!l) return; const ph = lookPics(l); l.photos = [id, ...ph.filter((x) => x !== id)]; save(); render(); },
+  delLookPic: (el) => { const s = getShoot(el.dataset.s); const [lid, id] = el.dataset.x.split('|'); const l = s.looks.find((x) => x.id === lid); if (!l) return; mDel(id); l.photos = lookPics(l).filter((x) => x !== id); save(); render(); },
   lfToggleOpen: (el) => { ui.lfOpen = ui.lfOpen || {}; ui.lfOpen[el.dataset.s] = !ui.lfOpen[el.dataset.s]; render(); },
   lfToggle: (el) => { const s = getShoot(el.dataset.s); if (!s.lf) { s.lf = {}; LOOK_F.forEach((f) => { s.lf[f[0]] = lfOn(s, f[0]); }); } s.lf[el.dataset.x] = !s.lf[el.dataset.x]; save(); render(); },
   outMode: (el) => makeOut(ui.sheet.s, el.dataset.x),
@@ -1484,7 +1485,7 @@ const A = {
   },
   exportJson: async () => {
     toast(T('Собираю копию…', 'Preparing backup…'));
-    const ids = []; S.shoots.forEach((s) => { (s.mood || []).forEach((x) => { if (x.kind === 'img') ids.push(x.id); }); s.looks.forEach((l) => { if (l.img) ids.push(l.img); }); });
+    const ids = []; S.shoots.forEach((s) => { (s.mood || []).forEach((x) => { if (x.kind === 'img') ids.push(x.id); }); s.looks.forEach((l) => { lookPics(l).forEach((x) => ids.push(x)); }); });
     const media = {}; for (const id of ids) { const b = await mGet(id); if (b) media[id] = await new Promise((r) => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.readAsDataURL(b); }); }
     download('set-backup-' + todayIso() + '.json', JSON.stringify({ ...S, media }), 'application/json');
   },
@@ -1542,6 +1543,7 @@ function pMood(s) {
   if (pics.length) h += '<div class="grid2">' + pics.map((x) => '<button data-a="viewImg" data-s="' + s.id + '" data-x="' + x.id + '" style="padding:0;border:none;background:var(--line);border-radius:18px;overflow:hidden;aspect-ratio:3/4">' + imgTag(x.id, 'width:100%;height:100%;object-fit:cover;display:block') + '</button>').join('') + '</div>';
   if (links.length) h += '<div class="card tight">' + links.map((x) => '<div class="li"><a class="grow" href="' + esc(/^https?:/i.test(x.url) ? x.url : 'https://' + x.url) + '" target="_blank" rel="noopener" style="word-break:break-all">' + esc(x.url) + '</a><button class="textbtn" data-a="delMood" data-s="' + s.id + '" data-x="' + x.id + '" aria-label="' + T('Удалить', 'Delete') + '">' + I.x.replace('<svg', '<svg width="16" height="16"') + '</button></div>').join('') + '</div>';
   h += '<div class="grid2"><button class="btn soft" data-a="pickMood" data-s="' + s.id + '">' + T('+ Фото', '+ Photos') + '</button><button class="btn soft" data-a="addMoodLink" data-s="' + s.id + '">' + T('+ Ссылка', '+ Link') + '</button></div>';
+  h += '<div class="card">' + field(T('Описание мудборда', 'Moodboard description'), '<textarea class="inp" rows="3" data-b="shoot:' + s.id + '.moodText" placeholder="' + T('Идея, настроение, свет, цвета — попадёт на лист вместе с картинками', 'Idea, mood, light, colours — goes on the sheet with the images') + '">' + esc(s.moodText || '') + '</textarea>') + '</div>';
   if (pics.length) h += '<button class="btn" data-a="moodSheet" data-s="' + s.id + '">' + T('Мудборд одной картинкой', 'Moodboard as one image') + '</button>';
   return h;
 }
@@ -1555,7 +1557,7 @@ async function onMediaFiles(files) {
     try {
       const blob = await compress(f); const id = 'img_' + uid(); await mPut(id, blob);
       if (t.kind === 'mood') { s.mood = s.mood || []; s.mood.push({ id, kind: 'img' }); }
-      else if (t.kind === 'look') { const l = s.looks.find((x) => x.id === t.look); const k = t.key || 'img'; if (l) { if (k === 'pics') { l.pics = l.pics || []; if (l.pics.length < 3) l.pics.push(id); else mDel(id); } else { if (l[k]) mDel(l[k]); l[k] = id; } } }
+      else if (t.kind === 'look') { const l = s.looks.find((x) => x.id === t.look); if (l) { const ph = lookPics(l); if (ph.length < LOOK_MAX) ph.push(id); else mDel(id); } }
     } catch (e) { toast(T('Не получилось добавить фото', 'Could not add a photo')); }
   }
   save(); render(); toast(T('Добавлено', 'Added'));
@@ -1583,7 +1585,7 @@ function sheetHead(c, s, label, page, pages) {
   if (pl) { c.font = "400 24px Inter, sans-serif"; c.fillStyle = '#4A4852'; wrapLines(c, pl, W - 2 * M, 2).forEach((ln) => { c.fillText(ln, M, y); y += 32; }); }
   c.fillStyle = '#E3E0E6'; c.fillRect(M, y + 4, W - 2 * M, 2); return y + 34;
 }
-function sheetFoot(c) { const { W, H, M } = A4; c.font = "400 18px Inter, sans-serif"; c.fillStyle = '#6E6B75'; c.fillText(T('Собрано в SET · смета и ставки на этот лист не попадают', 'Made with SET · no money on this sheet'), M, H - M + 20); }
+function sheetFoot(c) { const { W, H, M } = A4; c.font = "400 18px Inter, sans-serif"; c.fillStyle = '#6E6B75'; c.fillText(T('SET — приложение для съёмок', 'SET — the app for shoots'), M, H - M + 20); }
 async function drawLookPages(s) {
   await sheetFonts(); const { W, H, M } = A4; const per = 4; const looks = s.looks; const pages = Math.max(1, Math.ceil(looks.length / per)); const files = [];
   const on = (k) => lfOn(s, k); const v = (l, k) => on(k) ? String(l[k] || '').trim() : '';
@@ -1595,9 +1597,9 @@ async function drawLookPages(s) {
     for (let i = 0; i < chunk.length; i++) {
       const l = chunk[i], n = p * per + i + 1; const x = M + (i % cols) * (cw + gap), y = top + Math.floor(i / cols) * (ch + gap);
       c.fillStyle = '#F7F6F4'; rrect(c, x, y, cw, ch, 22); c.fill();
-      const pad = 18; const ims = (await Promise.all([on('mimg') ? l.mimg : '', on('img') ? l.img : ''].filter(Boolean).map(loadImg))).filter(Boolean);
+      const pad = 18; const ims = (await Promise.all((on('photos') ? lookPics(l).slice(0, 3) : []).map(loadImg))).filter(Boolean);
       const pw = cw - pad * 2; const ph = ims.length ? Math.min(ch * 0.5, pw * 0.75) : 0;
-      if (ims.length) { const w1 = ims.length === 2 ? (pw - 12) / 2 : pw; ims.forEach((im, k) => coverImg(c, im, x + pad + k * (w1 + 12), y + pad, w1, ph, 14)); }
+      if (ims.length) { const w1 = (pw - 12 * (ims.length - 1)) / ims.length; ims.forEach((im, k) => coverImg(c, im, x + pad + k * (w1 + 12), y + pad, w1, ph, 14)); }
       let ty = y + pad + (ims.length ? ph + 34 : 34); const tx = x + pad, tw = cw - pad * 2, yEnd = y + ch - 50;
       c.font = "500 20px 'IBM Plex Mono', monospace"; c.fillStyle = '#6E6B75'; c.fillText(T('ОБРАЗ ', 'LOOK ') + pad2(n) + (v(l, 'time') ? ' · ' + v(l, 'time') : ''), tx, ty); ty += 40;
       c.fillStyle = '#1A1A22'; c.font = "600 34px 'Inter Tight', Inter, sans-serif"; wrapLines(c, l.model || v(l, 'name') || '—', tw, 1).forEach((ln) => c.fillText(ln, tx, ty)); ty += 40;
@@ -1630,17 +1632,18 @@ async function drawLookCards(s) {
     c.font = "400 26px Inter, sans-serif"; c.fillStyle = mid; if (sub) wrapLines(c, sub, nmax, 2).forEach((ln, j) => c.fillText(ln, nx, M + 146 + j * 32));
     if (tm) { c.textAlign = 'right'; c.fillStyle = ink; c.font = "700 64px 'Inter Tight', Inter, sans-serif"; c.fillText(tm, W - M, M + 104); c.textAlign = 'left'; }
     // photos: only what exists
-    const ids = [on('mimg') ? l.mimg : '', on('img') ? l.img : '', ...(on('pics') ? (l.pics || []) : [])].filter(Boolean);
-    const ims = (await Promise.all(ids.map(loadImg))).filter(Boolean);
+    const ims = (await Promise.all((on('photos') ? lookPics(l) : []).map(loadImg))).filter(Boolean);
     const top = M + 230, bottom = H - M - 70, gap = 16; let textX = M, textW = W - 2 * M, y = top + 20, afterY = top;
     if (ims.length === 1) { const pw = 540, ph = 720; coverImg(c, ims[0], M, top, pw, ph, 10); textX = M + pw + 40; textW = W - M - textX; afterY = top + ph + 40; }
     else if (ims.length >= 2) {
-      const ph = ims.length > 2 ? 820 : 760; const leftW = 430, rightW = W - 2 * M - leftW - gap; const ex = ims.slice(2);
-      const mh = ex.length ? 520 : ph; coverImg(c, ims[0], M, top, leftW, mh, 10);
-      if (ex.length) { const ew = ex.length === 1 ? leftW : (leftW - gap) / 2; ex.slice(0, 2).forEach((im, k) => coverImg(c, im, M + k * (ew + gap), top + mh + gap, ew, ph - mh - gap, 10)); }
-      coverImg(c, ims[1], M + leftW + gap, top, rightW, ph, 10);
-      if (ex[2]) coverImg(c, ex[2], M + leftW + gap + rightW - 234, top + ph - 234, 220, 220, 10);
-      y = top + ph + 56; afterY = y;
+      const n = ims.length, AW = W - 2 * M, AH = n <= 2 ? 760 : n <= 4 ? 800 : 860; const R = [];
+      const grid = (x0, y0, w, h, cols, rows, cnt) => { const cw = (w - gap * (cols - 1)) / cols, ch = (h - gap * (rows - 1)) / rows; for (let k = 0; k < cnt; k++) R.push([x0 + (k % cols) * (cw + gap), y0 + Math.floor(k / cols) * (ch + gap), cw, ch]); };
+      if (n === 2) grid(M, top, AW, AH, 2, 1, 2);
+      else if (n === 4) grid(M, top, AW, AH, 2, 2, 4);
+      else if (n === 6) grid(M, top, AW, AH, 3, 2, 6);
+      else { const bw = Math.round(AW * (n === 3 ? 0.6 : 0.46)); R.push([M, top, bw, AH]); const rest = n - 1; const cols = rest <= 2 ? 1 : 2; grid(M + bw + gap, top, AW - bw - gap, AH, cols, Math.ceil(rest / cols), rest); }
+      R.forEach((r, k) => coverImg(c, ims[k], r[0], r[1], r[2], r[3], 10));
+      y = top + AH + 56; afterY = y;
     }
     // text blocks
     const fsz = ims.length ? 26 : 32, lh = Math.round(fsz * 1.32);
@@ -1660,7 +1663,7 @@ async function drawLookCards(s) {
     // footer
     c.fillStyle = '#E3E0E6'; c.fillRect(M, H - M - 40, W - 2 * M, 2);
     c.fillStyle = ink; c.font = "28px Neucha, 'Inter Tight', sans-serif"; c.fillText('set', M, H - M + 2);
-    c.font = "400 18px Inter, sans-serif"; c.fillStyle = soft; c.fillText(pad2(i + 1) + ' / ' + pad2(total), M + 60, H - M);
+    c.font = "400 18px Inter, sans-serif"; c.fillStyle = soft; c.fillText(pad2(i + 1) + ' / ' + pad2(total) + '  ·  ' + T('SET — приложение для съёмок', 'SET — the app for shoots'), M + 60, H - M);
     c.strokeStyle = ink; c.lineWidth = 2; c.strokeRect(W - M - 26, H - M - 22, 24, 24); c.textAlign = 'right'; c.fillStyle = ink; c.font = "400 22px Inter, sans-serif"; c.fillText(T('снят', 'shot'), W - M - 38, H - M); c.textAlign = 'left';
     const blob = await new Promise((r) => cv.toBlob(r, 'image/png'));
     files.push(new File([blob], fileBase(s, T('obraz', 'look')) + '-' + pad2(i + 1) + '.png', { type: 'image/png' }));
@@ -1674,18 +1677,20 @@ async function drawMoodPages(s) {
   for (let p = 0; p < pages; p++) {
     const cv = document.createElement('canvas'); cv.width = W; cv.height = H; const c = cv.getContext('2d');
     c.fillStyle = '#fff'; c.fillRect(0, 0, W, H);
-    const headH = 150; c.textBaseline = 'alphabetic';
+    c.textBaseline = 'alphabetic'; const desc = String(s.moodText || '').trim(); c.font = "400 24px Inter, sans-serif"; const dLines = p === 0 && desc ? desc.split('\n').flatMap((ln) => wrapLines(c, ln, W - 2 * M, 6)).slice(0, 8) : []; const headH = 150 + (dLines.length ? dLines.length * 32 + 30 : 0);
     c.fillStyle = '#1A1A22'; c.font = "28px Neucha, 'Inter Tight', sans-serif"; c.fillText('set', M, 62);
     c.fillStyle = '#6E6B75'; c.font = "500 20px 'IBM Plex Mono', monospace"; c.fillText(T('МУДБОРД', 'MOODBOARD') + (pages > 1 ? '  ' + (p + 1) + '/' + pages : ''), M + 64, 60);
     c.fillStyle = '#1A1A22'; let fs = 46; c.font = "600 " + fs + "px 'Inter Tight', Inter, sans-serif"; const title = titleOf(s); while (c.measureText(title).width > W - 2 * M - 300 && fs > 28) { fs -= 4; c.font = "600 " + fs + "px 'Inter Tight', Inter, sans-serif"; } c.fillText(title, M, 122);
     c.textAlign = 'right'; c.font = "400 22px Inter, sans-serif"; c.fillStyle = '#4A4852'; c.fillText([s.date ? fmtDate(s.date, { year: true }) : '', s.place].filter(Boolean).join(' · '), W - M, 122); c.textAlign = 'left';
+    if (dLines.length) { c.font = "400 24px Inter, sans-serif"; c.fillStyle = '#1A1A22'; dLines.forEach((ln, j) => c.fillText(ln, M, 168 + j * 32)); }
     const chunk = pics.slice(p * per, p * per + per); const [, rows] = grid(chunk.length);
-    const linkH = p === pages - 1 && links.length ? Math.min(links.length, 3) * 26 + 40 : 0;
+    const linkH = (p === pages - 1 && links.length ? Math.min(links.length, 3) * 26 + 20 : 0) + 44;
     const gy = headH, gh = H - headH - linkH, ch = gh / rows;
     const ims = await Promise.all(chunk.map((x) => loadImg(x.id)));
     const perRow = []; let left = ims.length; for (let r = 0; r < rows; r++) { const k = Math.ceil(left / (rows - r)); perRow.push(k); left -= k; }
     let idx = 0; perRow.forEach((k, r) => { const w = W / k; for (let j = 0; j < k; j++, idx++) { const im = ims[idx]; const x = j * w, y = gy + r * ch; c.save(); c.beginPath(); c.rect(Math.floor(x), Math.floor(y), Math.ceil(w) + 1, Math.ceil(ch) + 1); c.clip(); c.fillStyle = '#EFEDEA'; c.fillRect(x, y, w + 1, ch + 1); if (im) { const sc = Math.max(w / im.width, ch / im.height); c.drawImage(im, x + (w - im.width * sc) / 2, y + (ch - im.height * sc) / 2, im.width * sc, im.height * sc); } c.restore(); } });
-    if (linkH) { let ly = H - linkH + 32; c.font = "400 18px Inter, sans-serif"; c.fillStyle = '#3B4FB0'; links.slice(0, 3).forEach((u) => { wrapLines(c, u, W - 2 * M, 1).forEach((ln) => c.fillText(ln, M, ly)); ly += 26; }); }
+    let ly = H - linkH + 30; if (p === pages - 1 && links.length) { c.font = "400 18px Inter, sans-serif"; c.fillStyle = '#3B4FB0'; links.slice(0, 3).forEach((u) => { wrapLines(c, u, W - 2 * M, 1).forEach((ln) => c.fillText(ln, M, ly)); ly += 26; }); }
+    c.font = "400 18px Inter, sans-serif"; c.fillStyle = '#6E6B75'; c.fillText(T('SET — приложение для съёмок', 'SET — the app for shoots'), M, H - 16);
     const blob = await new Promise((r) => cv.toBlob(r, 'image/png'));
     files.push(new File([blob], fileBase(s, 'moodboard') + (pages > 1 ? '-' + (p + 1) : '') + '.png', { type: 'image/png' }));
   }
